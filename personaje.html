@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Personaje HUD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: transparent;
+  --text-primary: #e3e3e3;
+  --text-secondary: #888;
+  --text-accent: #d4c5a0;
+  --bar-bg: rgba(255,255,255,0.08);
+  --bar-fill: #d4c5a0;
+  --divider: rgba(255,255,255,0.08);
+  --rank-color: #a89070;
+  --level-color: #e3e3e3;
+}
+
+[data-theme="light"] {
+  --text-primary: #1a1a1a;
+  --text-secondary: #888;
+  --text-accent: #8B6914;
+  --bar-bg: rgba(0,0,0,0.06);
+  --bar-fill: #8B6914;
+  --divider: rgba(0,0,0,0.08);
+  --rank-color: #8B6914;
+  --level-color: #1a1a1a;
+}
+
+[data-theme="sepia"] {
+  --text-primary: #2c1a0e;
+  --text-secondary: #8a6a4a;
+  --text-accent: #6B4423;
+  --bar-bg: rgba(107,68,35,0.1);
+  --bar-fill: #6B4423;
+  --divider: rgba(107,68,35,0.15);
+  --rank-color: #6B4423;
+  --level-color: #2c1a0e;
+}
+
+body {
+  background: var(--bg);
+  font-family: 'Playfair Display', Georgia, serif;
+  color: var(--text-primary);
+  padding: 20px 24px 16px;
+  min-width: 280px;
+}
+
+.theme-switcher {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+  opacity: 0.4;
+  transition: opacity 0.2s;
+}
+.theme-switcher:hover { opacity: 1; }
+
+.theme-btn {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.theme-btn:hover { transform: scale(1.3); }
+.theme-btn.active { transform: scale(1.3); }
+.theme-btn[data-t="dark"]  { background: #2c2c2a; border: 1px solid #888; }
+.theme-btn[data-t="light"] { background: #f5f4ef; border: 1px solid #ccc; }
+.theme-btn[data-t="sepia"] { background: #e8d5b7; border: 1px solid #b09070; }
+
+.hud {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: 0 20px;
+}
+
+.name {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  font-family: 'DM Mono', monospace;
+  font-weight: 300;
+}
+
+.rank {
+  font-size: 22px;
+  font-weight: 400;
+  font-style: italic;
+  color: var(--rank-color);
+  line-height: 1.1;
+  margin-bottom: 2px;
+}
+
+.title {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-family: 'DM Mono', monospace;
+  font-weight: 300;
+  margin-bottom: 14px;
+}
+
+.level-block {
+  text-align: right;
+}
+
+.level-num {
+  font-size: 48px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--level-color);
+  letter-spacing: -2px;
+}
+
+.level-label {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  font-family: 'DM Mono', monospace;
+  font-weight: 300;
+}
+
+.divider {
+  height: 1px;
+  background: var(--divider);
+  margin: 12px 0;
+  grid-column: 1 / -1;
+}
+
+.xp-section {
+  grid-column: 1 / -1;
+}
+
+.xp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+
+.xp-label {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  font-family: 'DM Mono', monospace;
+  font-weight: 300;
+}
+
+.xp-value {
+  font-size: 11px;
+  color: var(--text-accent);
+  font-family: 'DM Mono', monospace;
+  font-weight: 400;
+}
+
+.bar-track {
+  height: 2px;
+  background: var(--bar-bg);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  background: var(--bar-fill);
+  border-radius: 1px;
+  transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.footer {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.footer-stat {
+  text-align: center;
+}
+
+.footer-val {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-accent);
+  font-family: 'DM Mono', monospace;
+}
+
+.footer-key {
+  font-size: 8px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  font-family: 'DM Mono', monospace;
+  font-weight: 300;
+  margin-top: 2px;
+}
+
+.loading-state {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--text-secondary);
+  letter-spacing: 0.15em;
+  padding: 8px 0;
+}
+</style>
+</head>
+<body data-theme="dark">
+
+<div class="theme-switcher" role="group" aria-label="Tema del widget">
+  <button class="theme-btn active" data-t="dark"  title="Oscuro"    onclick="setTheme('dark')"></button>
+  <button class="theme-btn"        data-t="light" title="Claro"     onclick="setTheme('light')"></button>
+  <button class="theme-btn"        data-t="sepia" title="Editorial" onclick="setTheme('sepia')"></button>
+</div>
+
+<div class="hud" id="hud">
+  <div class="loading-state">Cargando...</div>
+</div>
+
+<script>
+function setTheme(t) {
+  document.body.setAttribute('data-theme', t);
+  document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.t === t));
+  try { localStorage.setItem('hud_theme', t); } catch(e) {}
+}
+
+try {
+  const saved = localStorage.getItem('hud_theme');
+  if (saved) setTheme(saved);
+} catch(e) {}
+
+async function loadData() {
+  try {
+    const res = await fetch('/api/stats');
+    const d = await res.json();
+
+    const cur = d.xpTotal % 500;
+    const pct = Math.round((cur / 500) * 100);
+    const nextRank = d.xpTotal < 500 ? 500 :
+                     d.xpTotal < 1500 ? 1500 :
+                     d.xpTotal < 3500 ? 3500 : 7000;
+    const toNext = nextRank - d.xpTotal;
+
+    document.getElementById('hud').innerHTML = `
+      <div>
+        <div class="name">Paco</div>
+        <div class="rank">${d.rango || 'Iniciado'}</div>
+        <div class="title">Bearer of the Curse</div>
+      </div>
+
+      <div class="level-block">
+        <div class="level-num">${d.nivel || 1}</div>
+        <div class="level-label">Nivel</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="xp-section">
+        <div class="xp-header">
+          <span class="xp-label">Experiencia</span>
+          <span class="xp-value">${cur} / 500</span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" id="bar" style="width:0%"></div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div class="footer-stat">
+          <div class="footer-val">${d.xpTotal}</div>
+          <div class="footer-key">XP Total</div>
+        </div>
+        <div class="footer-stat">
+          <div class="footer-val">${toNext}</div>
+          <div class="footer-key">Para siguiente</div>
+        </div>
+        <div class="footer-stat">
+          <div class="footer-val">${d.nivel || 1}</div>
+          <div class="footer-key">Nivel actual</div>
+        </div>
+      </div>
+    `;
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const bar = document.getElementById('bar');
+        if (bar) bar.style.width = pct + '%';
+      });
+    });
+
+  } catch(e) {
+    document.getElementById('hud').innerHTML = '<div class="loading-state">Error al cargar</div>';
+  }
+}
+
+loadData();
+</script>
+</body>
+</html>
