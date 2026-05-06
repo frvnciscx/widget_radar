@@ -4,48 +4,59 @@ const NOTION_HEADERS = (token) => ({
   'Content-Type': 'application/json',
 });
 
+const PERSONAJE_DB = '9be62f8e75094d0e8e9be41e96eeb8ca';
+const STATS_DB     = '4abc659f8b144de99e8900fa1478964f';
+const HABITOS_DB   = '72f41711-a604-4b42-8254-6bf4243e3135'; // ⚡ Hábitos Diarios
+
 /**
- * Resuelve un rollup truncado vía /v1/pages/{page_id}/properties/{property_id}.
- * Pagina los items y suma. También captura el RAW de la primera página para diagnóstico.
- * Retorna { value, raw } o { value: null, raw: <error> }.
+ * Suma XP Ganado de la DB ⚡ Hábitos Diarios para un personaje específico.
+ * Bypassa el rollup "XP Hábitos Auto" que devuelve null en la API estándar.
+ * Pagina hasta 100 items por página, hasta 10 páginas (1000 hábitos máx).
  */
-async function resolveRollupWithRaw(token, pageId, propertyId) {
+async function sumXpHabitosFromSource(token, personajeId) {
   let cursor = null;
   let total = 0;
-  let resolved = false;
-  let firstPageRaw = null;
-  let pageCount = 0;
+  let count = 0;
+  let pages = 0;
+  let error = null;
 
-  do {
-    const url = `https://api.notion.com/v1/pages/${pageId}/properties/${propertyId}`
-              + (cursor ? `?start_cursor=${cursor}&page_size=100` : `?page_size=100`);
-    const r = await fetch(url, { headers: NOTION_HEADERS(token) });
-    if (!r.ok) {
-      const errText = await r.text();
-      return { value: null, raw: { httpError: r.status, body: errText.slice(0, 500) } };
-    }
-    const data = await r.json();
-    pageCount++;
-    if (firstPageRaw == null) firstPageRaw = data;
+  try {
+    do {
+      const body = {
+        filter: {
+          property: 'Personaje',
+          relation: { contains: personajeId },
+        },
+        page_size: 100,
+      };
+      if (cursor) body.start_cursor = cursor;
 
-    if (data.object === 'property_item' && data.type === 'rollup' && data.rollup?.type === 'number') {
-      return { value: data.rollup.number ?? 0, raw: firstPageRaw, pageCount };
-    }
+      const r = await fetch(`https://api.notion.com/v1/databases/${HABITOS_DB}/query`, {
+        method: 'POST',
+        headers: NOTION_HEADERS(token),
+        body: JSON.stringify(body),
+      });
 
-    if (data.object === 'list' && Array.isArray(data.results)) {
-      for (const item of data.results) {
-        if (item.type === 'number')                                          total += item.number ?? 0;
-        else if (item.type === 'formula' && item.formula?.type === 'number') total += item.formula.number ?? 0;
-        else if (item.type === 'rollup'  && item.rollup?.type  === 'number') total += item.rollup.number ?? 0;
+      if (!r.ok) {
+        error = { httpError: r.status, body: (await r.text()).slice(0, 500) };
+        break;
+      }
+      const data = await r.json();
+      pages++;
+
+      for (const habito of data.results || []) {
+        const xp = habito.properties?.['XP Ganado']?.formula?.number ?? 0;
+        total += xp;
+        count++;
       }
       cursor = data.has_more ? data.next_cursor : null;
-      resolved = true;
-    } else {
-      break;
-    }
-  } while (cursor);
+      if (pages >= 10) break; // safety
+    } while (cursor);
 
-  return { value: resolved ? total : null, raw: firstPageRaw, pageCount };
+    return { value: total, count, pages, error };
+  } catch (e) {
+    return { value: null, count, pages, error: { exception: e.message } };
+  }
 }
 
 export default async function handler(req, res) {
@@ -53,12 +64,9 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET');
 
   const NOTION_TOKEN = process.env.NOTION_TOKEN;
-  const PERSONAJE_DB = '9be62f8e75094d0e8e9be41e96eeb8ca';
-  const STATS_DB     = '4abc659f8b144de99e8900fa1478964f';
 
   try {
-    // Buscar también TODAS las DBs accesibles al integration
-    const [personajeRes, statsRes, searchRes] = await Promise.all([
+    const [personajeRes, statsRes] = await Promise.all([
       fetch(`https://api.notion.com/v1/databases/${PERSONAJE_DB}/query`, {
         method: 'POST',
         headers: NOTION_HEADERS(NOTION_TOKEN),
@@ -69,16 +77,10 @@ export default async function handler(req, res) {
         headers: NOTION_HEADERS(NOTION_TOKEN),
         body: JSON.stringify({ page_size: 10 }),
       }),
-      fetch(`https://api.notion.com/v1/search`, {
-        method: 'POST',
-        headers: NOTION_HEADERS(NOTION_TOKEN),
-        body: JSON.stringify({ filter: { value: 'database', property: 'object' }, page_size: 30 }),
-      }),
     ]);
 
     const personajeData = await personajeRes.json();
     const statsData     = await statsRes.json();
-    const searchData    = await searchRes.json();
 
     const page  = personajeData.results[0];
     const props = page.properties;
@@ -92,34 +94,20 @@ export default async function handler(req, res) {
       return null;
     };
 
-    const componentNames = [
-      'XP Físico', 'XP Mente', 'XP Hábitos', 'XP Nutrición', 'XP Negocio',
-      'XP Hábitos Auto', 'XP Auto',
-    ];
+    // --- COMPONENTES de XP manuales (number) y rollup XP Auto ---
+    const xpFisico    = readNumeric('XP Físico')    ?? 0;
+    const xpMente     = readNumeric('XP Mente')     ?? 0;
+    const xpHabitos   = readNumeric('XP Hábitos')   ?? 0;
+    const xpNutricion = readNumeric('XP Nutrición') ?? 0;
+    const xpNegocio   = readNumeric('XP Negocio')   ?? 0;
+    const xpAuto      = readNumeric('XP Auto')      ?? 0;
 
-    const xpComponents = {};
-    const xpResolutionLog = {};
-    const rollupRaw = {};
+    // --- BYPASS del rollup roto: sumar XP Hábitos Auto desde DB origen ---
+    const habitosResult = await sumXpHabitosFromSource(NOTION_TOKEN, page.id);
+    const xpHabitosAuto = habitosResult.value ?? 0;
 
-    for (const name of componentNames) {
-      let val = readNumeric(name);
-      let source = 'direct';
-
-      if (val == null && props[name]?.type === 'rollup' && props[name]?.id) {
-        const { value, raw, pageCount } = await resolveRollupWithRaw(NOTION_TOKEN, page.id, props[name].id);
-        if (value != null) {
-          val = value;
-          source = `pages.properties (${pageCount} pg)`;
-        }
-        rollupRaw[name] = raw;
-      }
-
-      xpComponents[name] = val ?? 0;
-      xpResolutionLog[name] = { value: val, source: val == null ? 'unresolved' : source };
-    }
-
-    const xpTotal = componentNames.reduce((sum, n) => sum + (xpComponents[n] || 0), 0);
-    const xpTotalNotion = readNumeric('XP Total');
+    // --- XP TOTAL: suma manual robusta ---
+    const xpTotal = xpFisico + xpMente + xpHabitos + xpNutricion + xpNegocio + xpAuto + xpHabitosAuto;
 
     const nivel  = Math.floor(xpTotal / 500) + 1;
     const rangos = ['💀 Iniciado','🗡️ Aprendiz','📖 Practicante','🛡️ Especialista','💎 Experto','🔥 Maestro','⚔️ Gran Maestro','👑 Leyenda'];
@@ -129,6 +117,7 @@ export default async function handler(req, res) {
     const filled  = Math.floor(cur / 50);
     const barraXP = `Nv.${nivel} ${'▰'.repeat(filled)}${'▱'.repeat(10 - filled)} ${cur}/500 XP`;
 
+    // --- STATS por categoría ---
     const statMap = {};
     for (const row of statsData.results) {
       const name = row.properties['Stat']?.title?.[0]?.plain_text || '';
@@ -139,12 +128,6 @@ export default async function handler(req, res) {
       if (name.includes('Hábitos'))   statMap.habitos   = xp;
       if (name.includes('Negocio'))   statMap.negocio   = xp;
     }
-
-    // DBs accesibles al integration (para identificar fuente de hábitos)
-    const accessibleDbs = (searchData.results || []).map(db => ({
-      id: db.id,
-      title: db.title?.map(t => t.plain_text).join('') || '(sin título)',
-    }));
 
     res.status(200).json({
       fisico:    statMap.fisico    || 0,
@@ -157,14 +140,23 @@ export default async function handler(req, res) {
       rango,
       barraXP,
       _debug: {
-        xpSource: 'manual sum (with rollup resolution)',
-        xpTotalNotion,
-        xpComponents,
-        xpResolutionLog,
-        // Raw del endpoint pages.properties para los rollups problemáticos
-        rollupRaw,
-        // Todas las DBs accesibles al integration
-        accessibleDbs,
+        xpSource: 'manual sum (rollup XP Hábitos Auto bypassed)',
+        xpComponents: {
+          'XP Físico': xpFisico,
+          'XP Mente': xpMente,
+          'XP Hábitos': xpHabitos,
+          'XP Nutrición': xpNutricion,
+          'XP Negocio': xpNegocio,
+          'XP Auto': xpAuto,
+          'XP Hábitos Auto (calculado)': xpHabitosAuto,
+        },
+        habitosBypass: {
+          dbId: HABITOS_DB,
+          itemsCount: habitosResult.count,
+          pagesScanned: habitosResult.pages,
+          error: habitosResult.error,
+        },
+        xpTotalNotion: readNumeric('XP Total'), // referencia: la fórmula de Notion sigue rota
       },
     });
 
