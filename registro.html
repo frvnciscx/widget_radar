@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Check-in del día</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+:root {
+  color-scheme: dark light;
+  --text-primary: #e3e3e3;
+  --text-secondary: #888;
+  --text-muted: #555;
+  --text-accent: #d4c5a0;
+  --rune: rgba(212,197,160,0.55);
+  --divider: rgba(212,197,160,0.18);
+  --row-hover: rgba(255,255,255,0.03);
+  --btn-bg: rgba(255,255,255,0.04);
+  --btn-bg-active: rgba(212,197,160,0.18);
+  --done-color: #6b9f6b;
+  --skip-color: #b06868;
+}
+
+[data-theme="light"] {
+  --text-primary: #1a1a1a;
+  --text-secondary: #888;
+  --text-muted: #aaa;
+  --text-accent: #8B6914;
+  --rune: rgba(139,105,20,0.55);
+  --divider: rgba(139,105,20,0.25);
+  --row-hover: rgba(0,0,0,0.03);
+  --btn-bg: rgba(0,0,0,0.04);
+  --btn-bg-active: rgba(139,105,20,0.18);
+  --done-color: #4a7c4a;
+  --skip-color: #a04a4a;
+}
+
+[data-theme="sepia"] {
+  --text-primary: #2c1a0e;
+  --text-secondary: #8a6a4a;
+  --text-muted: #b09070;
+  --text-accent: #6B4423;
+  --rune: rgba(107,68,35,0.55);
+  --divider: rgba(107,68,35,0.25);
+  --row-hover: rgba(107,68,35,0.04);
+  --btn-bg: rgba(107,68,35,0.06);
+  --btn-bg-active: rgba(107,68,35,0.18);
+  --done-color: #5a7a3a;
+  --skip-color: #9a4423;
+}
+
+body {
+  font-family: 'Playfair Display', Georgia, serif;
+  color: var(--text-primary);
+  padding: 18px 22px 14px;
+}
+
+.theme-switcher {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  opacity: 0.35;
+  transition: opacity 0.2s;
+}
+.theme-switcher:hover { opacity: 1; }
+.theme-btn {
+  width: 9px; height: 9px; border-radius: 50%;
+  border: none; cursor: pointer; transition: transform 0.15s;
+}
+.theme-btn:hover, .theme-btn.active { transform: scale(1.4); }
+.theme-btn[data-t="dark"]  { background: #2c2c2a; border: 1px solid #666; }
+.theme-btn[data-t="light"] { background: #f5f4ef; border: 1px solid #ccc; }
+.theme-btn[data-t="sepia"] { background: #e8d5b7; border: 1px solid #b09070; }
+
+.wrap {
+  position: relative;
+  padding: 16px 14px 12px;
+}
+
+.rune { position: absolute; width: 12px; height: 12px; }
+.rune-tl { top: 0; left: 0;     border-top: 1px solid var(--rune); border-left: 1px solid var(--rune); }
+.rune-tr { top: 0; right: 0;    border-top: 1px solid var(--rune); border-right: 1px solid var(--rune); }
+.rune-bl { bottom: 0; left: 0;  border-bottom: 1px solid var(--rune); border-left: 1px solid var(--rune); }
+.rune-br { bottom: 0; right: 0; border-bottom: 1px solid var(--rune); border-right: 1px solid var(--rune); }
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 12px;
+  gap: 12px;
+  border-bottom: 1px solid var(--divider);
+  padding-bottom: 8px;
+}
+
+.sect-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.35em;
+  color: var(--text-accent);
+  text-transform: uppercase;
+}
+
+.summary {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  font-weight: 300;
+}
+.summary .num { color: var(--text-accent); font-weight: 400; }
+
+.list { display: flex; flex-direction: column; }
+
+.row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 4px;
+  border-bottom: 1px solid var(--divider);
+  transition: background 0.15s;
+}
+.row:hover { background: var(--row-hover); }
+.row:last-child { border-bottom: none; }
+.row.completed .name { color: var(--text-muted); text-decoration: line-through; text-decoration-color: var(--divider); }
+.row.skipped .name   { color: var(--text-muted); opacity: 0.6; }
+
+.estado-group {
+  display: flex;
+  gap: 3px;
+}
+
+.estado-btn {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  background: var(--btn-bg);
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  opacity: 0.35;
+  transition: all 0.15s;
+}
+.estado-btn:hover { opacity: 0.75; }
+.estado-btn.active {
+  opacity: 1;
+  background: var(--btn-bg-active);
+}
+.estado-btn[data-e="completado"].active { color: var(--done-color); }
+.estado-btn[data-e="omitido"].active    { color: var(--skip-color); }
+
+.name {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-primary);
+  letter-spacing: 0.01em;
+  transition: color 0.15s;
+}
+
+.xp {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--text-accent);
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.row.skipped .xp,
+.row.completed .xp { opacity: 0.4; }
+
+.loading, .empty {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 22px 0;
+  text-transform: uppercase;
+}
+
+.error-toast {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--skip-color);
+  text-align: center;
+  padding: 6px 0 0;
+  letter-spacing: 0.1em;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.error-toast.visible { opacity: 1; }
+</style>
+</head>
+<body data-theme="dark">
+
+<div class="theme-switcher" role="group" aria-label="Tema del widget">
+  <button class="theme-btn active" data-t="dark"  title="Oscuro"    onclick="setTheme('dark')"></button>
+  <button class="theme-btn"        data-t="light" title="Claro"     onclick="setTheme('light')"></button>
+  <button class="theme-btn"        data-t="sepia" title="Editorial" onclick="setTheme('sepia')"></button>
+</div>
+
+<div class="wrap">
+  <span class="rune rune-tl"></span>
+  <span class="rune rune-tr"></span>
+  <span class="rune rune-bl"></span>
+  <span class="rune rune-br"></span>
+
+  <div class="header">
+    <span class="sect-label">Check-in del día</span>
+    <span class="summary" id="summary">—</span>
+  </div>
+
+  <div id="content" class="loading">Cargando...</div>
+  <div id="error" class="error-toast"></div>
+</div>
+
+<script>
+function setTheme(t) {
+  document.body.setAttribute('data-theme', t);
+  document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.t === t));
+  try { localStorage.setItem('registro_theme', t); } catch(e) {}
+}
+try {
+  const saved = localStorage.getItem('registro_theme');
+  if (saved) setTheme(saved);
+} catch(e) {}
+
+const ESTADOS = {
+  pendiente:  { label: '⬜', value: '⬜ Pendiente' },
+  completado: { label: '✓',  value: '✅ Completado' },
+  omitido:    { label: '✕',  value: '❌ Omitido' },
+};
+const VALUE_TO_KEY = {
+  '⬜ Pendiente':  'pendiente',
+  '✅ Completado': 'completado',
+  '❌ Omitido':    'omitido',
+};
+
+let ITEMS = [];
+
+function rowClass(estado) {
+  if (estado === '✅ Completado') return 'row completed';
+  if (estado === '❌ Omitido')    return 'row skipped';
+  return 'row';
+}
+
+function renderSummary() {
+  const total = ITEMS.length;
+  const done  = ITEMS.filter(i => i.estado === '✅ Completado').length;
+  const xp    = ITEMS
+    .filter(i => i.estado === '✅ Completado')
+    .reduce((s, i) => s + (i.xpBase || 0), 0);
+  const sumEl = document.getElementById('summary');
+  if (total === 0) { sumEl.textContent = '—'; return; }
+  sumEl.innerHTML = `<span class="num">${done}</span>/${total} · <span class="num">+${xp} XP</span>`;
+}
+
+function renderList() {
+  const root = document.getElementById('content');
+  if (ITEMS.length === 0) {
+    root.outerHTML = '<div id="content" class="empty">Sin hábitos hoy</div>';
+    return;
+  }
+
+  let html = '<div class="list">';
+  ITEMS.forEach(item => {
+    const key = VALUE_TO_KEY[item.estado] || 'pendiente';
+    html += `
+      <div class="${rowClass(item.estado)}" data-id="${item.id}">
+        <div class="estado-group">
+          <button class="estado-btn ${key === 'pendiente'  ? 'active' : ''}" data-e="pendiente"  title="Pendiente">${ESTADOS.pendiente.label}</button>
+          <button class="estado-btn ${key === 'completado' ? 'active' : ''}" data-e="completado" title="Completado">${ESTADOS.completado.label}</button>
+          <button class="estado-btn ${key === 'omitido'    ? 'active' : ''}" data-e="omitido"    title="Omitido">${ESTADOS.omitido.label}</button>
+        </div>
+        <div class="name">${escapeHtml(item.entrada)}</div>
+        <div class="xp">+${item.xpBase || 0}</div>
+      </div>`;
+  });
+  html += '</div>';
+
+  root.outerHTML = `<div id="content">${html}</div>`;
+  attachListeners();
+}
+
+function attachListeners() {
+  document.querySelectorAll('.row').forEach(row => {
+    row.querySelectorAll('.estado-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id     = row.dataset.id;
+        const target = btn.dataset.e;
+        const newVal = ESTADOS[target].value;
+        await toggle(id, newVal, row);
+      });
+    });
+  });
+}
+
+function showError(msg) {
+  const el = document.getElementById('error');
+  el.textContent = msg;
+  el.classList.add('visible');
+  setTimeout(() => el.classList.remove('visible'), 3000);
+}
+
+async function toggle(id, newEstado, rowEl) {
+  // Optimistic update
+  const item = ITEMS.find(i => i.id === id);
+  if (!item) return;
+  const prev = item.estado;
+  if (prev === newEstado) return; // sin cambios
+  item.estado = newEstado;
+  renderSummary();
+  // Update row classes/buttons sin re-render completo
+  rowEl.className = rowClass(newEstado);
+  rowEl.querySelectorAll('.estado-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.e === VALUE_TO_KEY[newEstado]);
+  });
+
+  try {
+    const r = await fetch('/api/habit-toggle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, estado: newEstado }),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+  } catch(e) {
+    // Revertir
+    item.estado = prev;
+    renderSummary();
+    rowEl.className = rowClass(prev);
+    rowEl.querySelectorAll('.estado-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.e === VALUE_TO_KEY[prev]);
+    });
+    showError('Error al guardar');
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+async function loadData() {
+  try {
+    const r = await fetch('/api/registro');
+    const d = await r.json();
+    ITEMS = d.items || [];
+    renderSummary();
+    renderList();
+  } catch(e) {
+    document.getElementById('content').textContent = 'Error al cargar';
+  }
+}
+
+loadData();
+</script>
+</body>
+</html>

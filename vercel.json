@@ -1,8 +1,11 @@
 {
   "version": 2,
   "rewrites": [
-    { "source": "/api/stats", "destination": "/api/stats.js" },
-    { "source": "/api/debug", "destination": "/api/debug.js" },
-    { "source": "/personaje", "destination": "/personaje.html" }
+    { "source": "/api/stats",         "destination": "/api/stats.js" },
+    { "source": "/api/debug",         "destination": "/api/debug.js" },
+    { "source": "/api/registro",      "destination": "/api/registro.js" },
+    { "source": "/api/habit-toggle",  "destination": "/api/habit-toggle.js" },
+    { "source": "/personaje",         "destination": "/personaje.html" },
+    { "source": "/registro",          "destination": "/registro.html" }
   ]
 }

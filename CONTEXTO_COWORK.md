@@ -19,11 +19,14 @@ Los widgets viven en un repositorio de GitHub y se despliegan en Vercel.
 ```
 radar-widget/
 ├── api/
-│   ├── stats.js      ← Lee DB Personaje + DB Stats de Notion (con bypass de rollups rotos)
-│   └── debug.js      ← Muestra raw JSON de Notion para debugging
-├── index.html        ← Radar de stats (widget activo)
-├── personaje.html    ← HUD de nivel/XP/rango (widget activo)
-├── vercel.json       ← Rutas de Vercel
+│   ├── stats.js          ← Lee DB Personaje + DB Stats (con bypass de rollups rotos)
+│   ├── registro.js       ← GET hábitos del día (filtro Fecha=hoy, TZ México)
+│   ├── habit-toggle.js   ← POST cambiar estado de un hábito (PATCH a Notion)
+│   └── debug.js          ← Muestra raw JSON de Notion para debugging
+├── index.html            ← Radar de stats (widget activo)
+├── personaje.html        ← HUD de nivel/XP/rango (widget activo)
+├── registro.html         ← Check-in diario interactivo (widget activo)
+├── vercel.json           ← Rutas de Vercel
 └── package.json
 ```
 
@@ -32,11 +35,11 @@ radar-widget/
 |--------|-----|-------------|
 | Radar de stats | `widgetradar.vercel.app` | Radar chart con 5 stats + barras |
 | HUD Personaje | `widgetradar.vercel.app/personaje` | Nivel, XP, Rango, barra de progreso |
+| Check-in diario | `widgetradar.vercel.app/registro` | Hábitos del día con botones ⬜/✅/❌ interactivos |
 
 ## Widgets pendientes por construir
 | Widget | Descripción |
 |--------|-------------|
-| Check-in diario | Lista de hábitos del día con checkboxes interactivos |
 | Misiones activas | Lista de misiones con progreso |
 | Racha diaria | Días consecutivos de hábitos |
 
