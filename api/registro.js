@@ -4,7 +4,7 @@ const NOTION_HEADERS = (token) => ({
   'Content-Type': 'application/json',
 });
 
-const REGISTRO_DB = '19a27bda-534c-4204-914e-86602ac2d28e';
+const REGISTRO_DB = '4d07427278354af79dbb0b3091d42f77';
 const TZ = 'America/Mexico_City';
 
 /**

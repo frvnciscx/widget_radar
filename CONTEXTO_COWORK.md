@@ -59,7 +59,7 @@ radar-widget/
 |---------------|-----|
 | 🧙 Personaje | `9be62f8e75094d0e8e9be41e96eeb8ca` |
 | 📊 Stats | `4abc659f8b144de99e8900fa1478964f` |
-| 📅 Registro Diario | `19a27bda-534c-4204-914e-86602ac2d28e` |
+| 📅 Registro Diario | `4d07427278354af79dbb0b3091d42f77` (database_id) — `19a27bda-534c-4204-914e-86602ac2d28e` es el data_source_id, NO usar en API |
 | ⚔️ Misiones | `94334b895c7647b18e9102598bd4f5f8` |
 | 📋 Catálogo de Hábitos | `a01a7ce7-014c-431c-93cb-85ecefd3fa53` |
 
