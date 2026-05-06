@@ -85,6 +85,22 @@ export default async function handler(req, res) {
       if (name.includes('Negocio'))   statMap.negocio   = xp;
     }
 
+    // Diagnóstico full: todas las propiedades numéricas (number/formula.number/rollup.number)
+    // y todas las strings de fórmula. Permite identificar la propiedad correcta sin endpoints extra.
+    const allNumeric = {};
+    const allStrings = {};
+    for (const [key, val] of Object.entries(props)) {
+      if (val.type === 'number')  allNumeric[key] = { type: 'number',  value: val.number };
+      if (val.type === 'formula') {
+        if (val.formula?.type === 'number') allNumeric[key] = { type: 'formula.number', value: val.formula.number };
+        if (val.formula?.type === 'string') allStrings[key] = { type: 'formula.string', value: val.formula.string };
+      }
+      if (val.type === 'rollup') {
+        if (val.rollup?.type === 'number') allNumeric[key] = { type: 'rollup.number', value: val.rollup.number };
+        if (val.rollup?.type === 'array')  allNumeric[key] = { type: 'rollup.array',  value: val.rollup.array?.length, sample: val.rollup.array?.[0] };
+      }
+    }
+
     res.status(200).json({
       fisico:    statMap.fisico    || 0,
       mente:     statMap.mente     || 0,
@@ -99,6 +115,8 @@ export default async function handler(req, res) {
       _debug: {
         xpSource,
         xpComponents,
+        allNumericProps: allNumeric,
+        allStringProps: allStrings,
       },
     });
 
