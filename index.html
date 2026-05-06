@@ -3,303 +3,303 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stats — Chronicle of the Undead</title>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Cinzel:wght@400;600&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<title>Radar de Stats</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-  --ash: #0a0907;
-  --stone: #111009;
-  --ember: #c8792a;
-  --ember-dim: #7a4418;
-  --ember-bright: #e8a050;
-  --bone: #c4b48a;
-  --bone-dim: #7a6e52;
-  --bone-muted: #3d3828;
-  --seam: rgba(196,180,138,0.13);
-  --green-stat: #4a9c6e;
-}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
-  background: #191919;
-
-  font-family: 'IM Fell English', Georgia, serif;
-  color: var(--bone);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 12px;
-  overflow: hidden;
+  background: transparent !important;
+  background-color: transparent !important;
 }
+
+:root {
+  color-scheme: dark light;
+  --text-primary: #e3e3e3;
+  --text-secondary: #888;
+  --text-muted: #555;
+  --text-accent: #d4c5a0;
+  --rune: rgba(212,197,160,0.55);
+  --radar-stroke: rgba(212,197,160,0.7);
+  --radar-fill: rgba(212,197,160,0.08);
+  --grid-line: rgba(255,255,255,0.07);
+  --bar-bg: rgba(255,255,255,0.06);
+  --bar-fill: #d4c5a0;
+  --divider: rgba(212,197,160,0.18);
+}
+
+[data-theme="light"] {
+  --text-primary: #1a1a1a;
+  --text-secondary: #888;
+  --text-muted: #aaa;
+  --text-accent: #8B6914;
+  --rune: rgba(139,105,20,0.55);
+  --radar-stroke: rgba(139,105,20,0.8);
+  --radar-fill: rgba(139,105,20,0.07);
+  --grid-line: rgba(0,0,0,0.07);
+  --bar-bg: rgba(0,0,0,0.06);
+  --bar-fill: #8B6914;
+  --divider: rgba(139,105,20,0.25);
+}
+
+[data-theme="sepia"] {
+  --text-primary: #2c1a0e;
+  --text-secondary: #8a6a4a;
+  --text-muted: #b09070;
+  --text-accent: #6B4423;
+  --rune: rgba(107,68,35,0.55);
+  --radar-stroke: rgba(107,68,35,0.8);
+  --radar-fill: rgba(107,68,35,0.08);
+  --grid-line: rgba(107,68,35,0.12);
+  --bar-bg: rgba(107,68,35,0.08);
+  --bar-fill: #6B4423;
+  --divider: rgba(107,68,35,0.25);
+}
+
+body {
+  font-family: 'Playfair Display', Georgia, serif;
+  color: var(--text-primary);
+  padding: 22px 28px 18px;
+}
+
+.theme-switcher {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  opacity: 0.35;
+  transition: opacity 0.2s;
+}
+.theme-switcher:hover { opacity: 1; }
+.theme-btn {
+  width: 9px; height: 9px; border-radius: 50%;
+  border: none; cursor: pointer; transition: transform 0.15s;
+}
+.theme-btn:hover, .theme-btn.active { transform: scale(1.4); }
+.theme-btn[data-t="dark"]  { background: #2c2c2a; border: 1px solid #666; }
+.theme-btn[data-t="light"] { background: #f5f4ef; border: 1px solid #ccc; }
+.theme-btn[data-t="sepia"] { background: #e8d5b7; border: 1px solid #b09070; }
 
 .wrap {
-  width: 100%;
-  max-width: 680px;
-  background: var(--stone);
-  border: 1px solid var(--seam);
-  padding: 24px;
   position: relative;
+  padding: 18px 14px 14px;
 }
 
-.rune-tl, .rune-tr, .rune-bl, .rune-br {
-  position: absolute; width: 14px; height: 14px;
-}
-.rune-tl { top: 6px; left: 6px;   border-top: 1px solid var(--ember-dim); border-left: 1px solid var(--ember-dim); }
-.rune-tr { top: 6px; right: 6px;  border-top: 1px solid var(--ember-dim); border-right: 1px solid var(--ember-dim); }
-.rune-bl { bottom: 6px; left: 6px;  border-bottom: 1px solid var(--ember-dim); border-left: 1px solid var(--ember-dim); }
-.rune-br { bottom: 6px; right: 6px; border-bottom: 1px solid var(--ember-dim); border-right: 1px solid var(--ember-dim); }
+/* Corner brackets (runes) — sutiles, dorado hueso */
+.rune { position: absolute; width: 14px; height: 14px; }
+.rune-tl { top: 0; left: 0;     border-top: 1px solid var(--rune); border-left: 1px solid var(--rune); }
+.rune-tr { top: 0; right: 0;    border-top: 1px solid var(--rune); border-right: 1px solid var(--rune); }
+.rune-bl { bottom: 0; left: 0;  border-bottom: 1px solid var(--rune); border-left: 1px solid var(--rune); }
+.rune-br { bottom: 0; right: 0; border-bottom: 1px solid var(--rune); border-right: 1px solid var(--rune); }
 
-.header {
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-.char-name {
-  font-family: 'Cinzel Decorative', serif;
-  font-size: 18px;
-  color: var(--ember-bright);
-  letter-spacing: 2px;
-  margin-bottom: 4px;
-}
-
-.char-rank {
-  font-family: 'Cinzel', serif;
-  font-size: 10px;
-  letter-spacing: 3px;
-  color: var(--ember-dim);
+.sect-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.35em;
+  color: var(--text-accent);
   text-transform: uppercase;
-  margin-bottom: 8px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
+.sect-label::after { content: ''; flex: 1; height: 1px; background: var(--divider); }
 
-.xp-bar-text {
-  font-family: 'Cinzel', serif;
-  font-size: 11px;
-  color: var(--bone-dim);
-  letter-spacing: 1px;
-}
-
-.content {
+.layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  align-items: flex-start;
+  gap: 0 22px;
+  align-items: center;
 }
 
-@media (max-width: 500px) {
-  .content { grid-template-columns: 1fr; }
-}
+.radar-wrap { display: flex; justify-content: center; }
+.stats-col  { display: flex; flex-direction: column; gap: 11px; }
 
-.radar-wrap {
-  display: flex;
-  justify-content: center;
-}
-
-.stats-list { display: flex; flex-direction: column; gap: 12px; }
-
-.stat-row { display: flex; flex-direction: column; gap: 4px; }
-
-.stat-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
+.stat-item { display: flex; flex-direction: column; gap: 4px; }
+.stat-head { display: flex; justify-content: space-between; align-items: baseline; }
 
 .stat-name {
-  font-family: 'Cinzel', serif;
-  font-size: 8px;
-  letter-spacing: 2px;
-  color: var(--bone-dim);
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
+  color: var(--text-secondary);
+  font-weight: 300;
 }
 
 .stat-val {
+  font-family: 'DM Mono', monospace;
   font-size: 12px;
-  color: var(--bone);
+  color: var(--text-accent);
+  font-weight: 400;
 }
 
-.stat-bar-bg {
-  height: 4px;
-  background: #0d0b08;
-  border: 1px solid var(--bone-muted);
-  overflow: hidden;
+.bar-track {
+  height: 1px;
+  background: var(--bar-bg);
+  position: relative;
 }
 
-.stat-bar-fill {
+.bar-fill {
   height: 100%;
-  opacity: 0.8;
-  transition: width 1s ease;
+  background: var(--bar-fill);
+  width: 0;
+  transition: width 1.2s cubic-bezier(0.4,0,0.2,1);
 }
-
-.loading {
-  text-align: center;
-  font-family: 'Cinzel', serif;
-  font-size: 10px;
-  letter-spacing: 3px;
-  color: var(--ember-dim);
-  text-transform: uppercase;
-  padding: 40px;
-}
-
-.sect-label {
-  font-family: 'Cinzel', serif;
-  font-size: 7px;
-  letter-spacing: 4px;
-  color: var(--ember-dim);
-  text-transform: uppercase;
-  margin-bottom: 16px;
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-.sect-label::after { content: ''; flex: 1; height: 1px; background: var(--seam); }
 
 .epitaph {
   text-align: center;
-  margin-top: 20px;
-  font-family: 'Cinzel', serif;
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid var(--divider);
+  font-family: 'DM Mono', monospace;
   font-size: 7px;
-  letter-spacing: 4px;
-  color: var(--bone-muted);
+  letter-spacing: 0.4em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.loading {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 30px 0;
   text-transform: uppercase;
 }
 </style>
 </head>
-<body>
-<div class="wrap">
-  <div class="rune-tl"></div><div class="rune-tr"></div>
-  <div class="rune-bl"></div><div class="rune-br"></div>
+<body data-theme="dark">
 
-  <div class="header">
-    <div class="char-name">PACO</div>
-    <div class="char-rank" id="rank-text">Cargando...</div>
-    <div class="xp-bar-text" id="xp-bar-text">—</div>
-  </div>
+<div class="theme-switcher" role="group" aria-label="Tema del widget">
+  <button class="theme-btn active" data-t="dark"  title="Oscuro"    onclick="setTheme('dark')"></button>
+  <button class="theme-btn"        data-t="light" title="Claro"     onclick="setTheme('light')"></button>
+  <button class="theme-btn"        data-t="sepia" title="Editorial" onclick="setTheme('sepia')"></button>
+</div>
+
+<div class="wrap">
+  <span class="rune rune-tl"></span>
+  <span class="rune rune-tr"></span>
+  <span class="rune rune-bl"></span>
+  <span class="rune rune-br"></span>
 
   <div class="sect-label">Radar de Stats</div>
 
-  <div id="loading" class="loading">Invocando el alma del personaje...</div>
-
-  <div id="main-content" style="display:none;">
-    <div class="content">
-      <div class="radar-wrap">
-        <canvas id="radar" width="220" height="220"></canvas>
-      </div>
-      <div class="stats-list" id="stats-list"></div>
-    </div>
-  </div>
+  <div id="content" class="loading">Cargando...</div>
 
   <div class="epitaph">Praise the Sun · Kindle the Ember · Link the Fire</div>
 </div>
 
 <script>
-const STAT_CONFIG = [
-  { key: 'fisico',    label: 'Físico',    color: '#8c2020', max: 500 },
-  { key: 'mente',     label: 'Mente',     color: '#3a5c80', max: 500 },
-  { key: 'nutricion', label: 'Nutrición', color: '#3a5c30', max: 500 },
-  { key: 'habitos',   label: 'Hábitos',   color: '#c8792a', max: 500 },
-  { key: 'negocio',   label: 'Negocio',   color: '#7a6030', max: 500 },
+function setTheme(t) {
+  document.body.setAttribute('data-theme', t);
+  document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.t === t));
+  try { localStorage.setItem('radar_theme', t); } catch(e) {}
+}
+try {
+  const saved = localStorage.getItem('radar_theme');
+  if (saved) setTheme(saved);
+} catch(e) {}
+
+const STATS = [
+  { key: 'fisico',    label: 'Físico',    max: 500 },
+  { key: 'mente',     label: 'Mente',     max: 500 },
+  { key: 'nutricion', label: 'Nutrición', max: 500 },
+  { key: 'habitos',   label: 'Hábitos',   max: 500 },
+  { key: 'negocio',   label: 'Negocio',   max: 500 },
 ];
 
-async function loadStats() {
-  try {
-    const res = await fetch('/api/stats');
-    const data = await res.json();
-    renderDashboard(data);
-  } catch(e) {
-    document.getElementById('loading').textContent = 'Error al cargar los datos.';
-  }
-}
+function buildRadar(data) {
+  const size = 200;
+  const cx = size / 2, cy = size / 2, R = 78;
+  const N = STATS.length;
+  const angle = i => (Math.PI * 2 * i / N) - Math.PI / 2;
+  const pt = (i, r) => [cx + r * Math.cos(angle(i)), cy + r * Math.sin(angle(i))];
 
-function renderDashboard(data) {
-  document.getElementById('loading').style.display = 'none';
-  document.getElementById('main-content').style.display = 'block';
+  let svg = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">`;
 
-  document.getElementById('rank-text').textContent =
-    `${data.rango || '💀 Iniciado'} · Nivel ${data.nivel || 1}`;
-  document.getElementById('xp-bar-text').textContent = data.barraXP || '';
-
-  buildStatsList(data);
-  drawRadar(data);
-}
-
-function buildStatsList(data) {
-  const list = document.getElementById('stats-list');
-  list.innerHTML = '';
-  STAT_CONFIG.forEach(s => {
-    const val = data[s.key] || 0;
-    const pct = Math.min(Math.round((val / s.max) * 100), 100);
-    list.innerHTML += `
-      <div class="stat-row">
-        <div class="stat-head">
-          <span class="stat-name">${s.label}</span>
-          <span class="stat-val">${val}</span>
-        </div>
-        <div class="stat-bar-bg">
-          <div class="stat-bar-fill" style="width:${pct}%;background:${s.color};"></div>
-        </div>
-      </div>`;
-  });
-}
-
-function drawRadar(data) {
-  const canvas = document.getElementById('radar');
-  const ctx = canvas.getContext('2d');
-  const W = 220, H = 220, cx = 110, cy = 115, R = 80;
-  const N = STAT_CONFIG.length;
-
-  function angle(i) { return (Math.PI * 2 * i / N) - Math.PI / 2; }
-  function pt(i, r) { return [cx + r * Math.cos(angle(i)), cy + r * Math.sin(angle(i))]; }
-
-  ctx.clearRect(0, 0, W, H);
-
+  // anillos concéntricos
   for (let ring = 1; ring <= 4; ring++) {
     const r = R * ring / 4;
-    ctx.beginPath();
+    let d = '';
     for (let i = 0; i < N; i++) {
       const [x, y] = pt(i, r);
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      d += (i === 0 ? 'M' : 'L') + `${x.toFixed(1)},${y.toFixed(1)} `;
     }
-    ctx.closePath();
-    ctx.strokeStyle = 'rgba(196,180,138,0.1)';
-    ctx.lineWidth = 0.5;
-    ctx.stroke();
+    svg += `<path d="${d}Z" fill="none" stroke="var(--grid-line)" stroke-width="0.5"/>`;
   }
 
+  // ejes + labels
   for (let i = 0; i < N; i++) {
     const [x, y] = pt(i, R);
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(x, y);
-    ctx.strokeStyle = 'rgba(196,180,138,0.1)';
-    ctx.lineWidth = 0.5;
-    ctx.stroke();
-
-    const [lx, ly] = pt(i, R + 16);
-    ctx.fillStyle = '#7a6e52';
-    ctx.font = '9px Cinzel, serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(STAT_CONFIG[i].label, lx, ly);
+    svg += `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--grid-line)" stroke-width="0.5"/>`;
+    const [lx, ly] = pt(i, R + 14);
+    svg += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="DM Mono, monospace" font-size="7" font-weight="300" fill="var(--text-secondary)" letter-spacing="0.15em">${STATS[i].label.toUpperCase()}</text>`;
   }
 
-  const values = STAT_CONFIG.map(s => Math.min((data[s.key] || 0) / s.max, 1));
-
-  ctx.beginPath();
+  // forma de stats
+  const vals = STATS.map(s => Math.min((data[s.key] || 0) / s.max, 1));
+  let shape = '';
   for (let i = 0; i < N; i++) {
-    const r = R * Math.max(values[i], 0.04);
+    const r = R * Math.max(vals[i], 0.03);
     const [x, y] = pt(i, r);
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    shape += (i === 0 ? 'M' : 'L') + `${x.toFixed(1)},${y.toFixed(1)} `;
   }
-  ctx.closePath();
-  ctx.fillStyle = 'rgba(74,156,110,0.15)';
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(74,156,110,0.7)';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
+  svg += `<path d="${shape}Z" fill="var(--radar-fill)" stroke="var(--radar-stroke)" stroke-width="1"/>`;
+
+  // puntos
+  for (let i = 0; i < N; i++) {
+    const r = R * Math.max(vals[i], 0.03);
+    const [x, y] = pt(i, r);
+    svg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2" fill="var(--radar-stroke)"/>`;
+  }
+
+  svg += '</svg>';
+  return svg;
 }
 
-loadStats();
+async function loadData() {
+  try {
+    const res = await fetch('/api/stats');
+    const d = await res.json();
+
+    let statsHTML = '';
+    STATS.forEach(s => {
+      const val = d[s.key] || 0;
+      const pct = Math.min(Math.round((val / s.max) * 100), 100);
+      statsHTML += `
+        <div class="stat-item">
+          <div class="stat-head">
+            <span class="stat-name">${s.label}</span>
+            <span class="stat-val">${val}</span>
+          </div>
+          <div class="bar-track">
+            <div class="bar-fill" data-pct="${pct}"></div>
+          </div>
+        </div>`;
+    });
+
+    document.getElementById('content').outerHTML = `
+      <div id="content" class="layout">
+        <div class="radar-wrap">${buildRadar(d)}</div>
+        <div class="stats-col">${statsHTML}</div>
+      </div>
+    `;
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        document.querySelectorAll('.bar-fill').forEach(b => {
+          b.style.width = (b.dataset.pct || 0) + '%';
+        });
+      });
+    });
+  } catch(e) {
+    document.getElementById('content').textContent = 'Error al cargar';
+  }
+}
+
+loadData();
 </script>
 </body>
 </html>

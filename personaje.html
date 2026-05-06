@@ -9,8 +9,13 @@
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+html, body {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
 :root {
-  --bg: transparent;
+  color-scheme: dark light;
   --text-primary: #e3e3e3;
   --text-secondary: #888;
   --text-accent: #d4c5a0;
@@ -44,11 +49,9 @@
 }
 
 body {
-  background: var(--bg);
   font-family: 'Playfair Display', Georgia, serif;
   color: var(--text-primary);
   padding: 20px 24px 16px;
-  min-width: 280px;
 }
 
 .theme-switcher {

@@ -4,7 +4,7 @@ export default async function handler(req, res) {
 
   const NOTION_TOKEN = process.env.NOTION_TOKEN;
   const PERSONAJE_DB = '9be62f8e75094d0e8e9be41e96eeb8ca';
-  const STATS_DB = '4abc659f8b144de99e8900fa1478964f';
+  const STATS_DB     = '4abc659f8b144de99e8900fa1478964f';
 
   try {
     const [personajeRes, statsRes] = await Promise.all([
@@ -29,38 +29,55 @@ export default async function handler(req, res) {
     ]);
 
     const personajeData = await personajeRes.json();
-    const statsData = await statsRes.json();
+    const statsData     = await statsRes.json();
 
-    const page = personajeData.results[0];
+    const page  = personajeData.results[0];
     const props = page.properties;
 
-    const getNumber  = (prop) => props[prop]?.number || 0;
-    const getRollup  = (prop) => props[prop]?.rollup?.number || 0;
-    const getFormula = (prop) => props[prop]?.formula?.number || 0;
-    const getString  = (prop) => props[prop]?.formula?.string || '';
+    // Lectura tolerante a tipo: number | formula.number | rollup.number
+    const readNumeric = (prop) => {
+      const p = props[prop];
+      if (!p) return null;
+      if (p.type === 'number')  return (p.number  ?? 0);
+      if (p.type === 'formula') return (p.formula?.number ?? 0);
+      if (p.type === 'rollup')  return (p.rollup?.number  ?? 0);
+      return null;
+    };
 
-    // Suma todos los componentes del XP Total
-    const xpTotal =
-      getNumber('XP Físico') +
-      getNumber('XP Mente') +
-      getNumber('XP Hábitos') +
-      getNumber('XP Nutrición') +
-      getNumber('XP Negocio') +
-      getRollup('XP Hábitos Auto') +
-      getRollup('XP Auto');
+    const getString = (prop) => props[prop]?.formula?.string || '';
 
-    const nivel = Math.floor(xpTotal / 500) + 1;
+    // --- XP TOTAL ---
+    // 1) Preferir la propiedad calculada en Notion ("XP Total" como fórmula)
+    // 2) Fallback: sumar componentes con detección de tipo
+    const componentNames = [
+      'XP Físico', 'XP Mente', 'XP Hábitos', 'XP Nutrición', 'XP Negocio',
+      'XP Hábitos Auto', 'XP Auto',
+    ];
+
+    const xpComponents = {};
+    componentNames.forEach(n => { xpComponents[n] = readNumeric(n); });
+
+    let xpTotal = readNumeric('XP Total');
+    let xpSource = 'XP Total (Notion)';
+
+    if (xpTotal == null) {
+      xpTotal  = componentNames.reduce((sum, n) => sum + (xpComponents[n] || 0), 0);
+      xpSource = 'suma de componentes';
+    }
+
+    const nivel  = Math.floor(xpTotal / 500) + 1;
     const rangos = ['💀 Iniciado','🗡️ Aprendiz','📖 Practicante','🛡️ Especialista','💎 Experto','🔥 Maestro','⚔️ Gran Maestro','👑 Leyenda'];
-    const rango = rangos[Math.min(nivel - 1, rangos.length - 1)];
+    const rango  = rangos[Math.min(nivel - 1, rangos.length - 1)];
 
-    const cur = xpTotal - (Math.floor(xpTotal / 500) * 500);
-    const filled = Math.floor(cur / 50);
+    const cur     = xpTotal - (Math.floor(xpTotal / 500) * 500);
+    const filled  = Math.floor(cur / 50);
     const barraXP = `Nv.${nivel} ${'▰'.repeat(filled)}${'▱'.repeat(10 - filled)} ${cur}/500 XP`;
 
+    // --- STATS por categoría ---
     const statMap = {};
     for (const row of statsData.results) {
       const name = row.properties['Stat']?.title?.[0]?.plain_text || '';
-      const xp = row.properties['XP Total Stat']?.rollup?.number || 0;
+      const xp   = row.properties['XP Total Stat']?.rollup?.number || 0;
       if (name.includes('Físico'))    statMap.fisico    = xp;
       if (name.includes('Mente'))     statMap.mente     = xp;
       if (name.includes('Nutrición')) statMap.nutricion = xp;
@@ -78,6 +95,11 @@ export default async function handler(req, res) {
       nivel,
       rango,
       barraXP,
+      // Diagnóstico (visible en /api/stats sin afectar widgets)
+      _debug: {
+        xpSource,
+        xpComponents,
+      },
     });
 
   } catch (error) {
