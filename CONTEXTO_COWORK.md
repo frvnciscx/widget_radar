@@ -23,7 +23,6 @@ radar-widget/
 │   └── debug.js      ← Muestra raw JSON de Notion para debugging
 ├── index.html        ← Radar de stats (widget activo)
 ├── personaje.html    ← HUD de nivel/XP/rango (widget activo)
-├── stats.html        ← 5 barras de stats compactas (widget activo)
 ├── vercel.json       ← Rutas de Vercel
 └── package.json
 ```
@@ -33,7 +32,6 @@ radar-widget/
 |--------|-----|-------------|
 | Radar de stats | `widgetradar.vercel.app` | Radar chart con 5 stats + barras |
 | HUD Personaje | `widgetradar.vercel.app/personaje` | Nivel, XP, Rango, barra de progreso |
-| Stats bars | `widgetradar.vercel.app/stats` | 5 barras de stats compactas, sin radar |
 
 ## Widgets pendientes por construir
 | Widget | Descripción |

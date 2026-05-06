@@ -3,7 +3,6 @@
   "rewrites": [
     { "source": "/api/stats", "destination": "/api/stats.js" },
     { "source": "/api/debug", "destination": "/api/debug.js" },
-    { "source": "/personaje", "destination": "/personaje.html" },
-    { "source": "/stats", "destination": "/stats.html" }
+    { "source": "/personaje", "destination": "/personaje.html" }
   ]
 }
