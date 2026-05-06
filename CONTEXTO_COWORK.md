@@ -92,3 +92,25 @@ El sistema es un tracker de hábitos gamificado con estética Dark Souls.
 ## Referencia estética Dark Souls (para PWA futura)
 - CodePen: https://codepen.io/frvnciscx/full/GgNpZpa
 - GitHub Pages: https://frvnciscx.github.io/life-dashboard/
+
+## Lecciones operativas (errores reincidentes a evitar)
+
+### Notion API
+- **El ID de DB que va en `/v1/databases/{id}/query` es el `database_id` (URL del navegador), NO el `data_source_id`** (`collection://...`). En DBs multi-source son distintos. Si el endpoint da 404 con conexión válida, verificar que el ID coincida con `notion.so/{ID}`.
+- **Mover una DB cambia su scope de permisos.** Las integraciones conectadas vía herencia (página padre) se pierden al mover al root. Reconectar Make/integration explícitamente a cada DB suelta.
+- **Rollups que apuntan a DBs en papelera devuelven `null` en API** mientras la UI muestra el cache. Si un cálculo da menos de lo esperado, revisar rollups con `null` y la papelera.
+- **Filtros relativos `today` no existen en la API** (sí en UI). Calcular fecha en backend con `Intl.DateTimeFormat.formatToParts` + `timeZone` explícita. `toLocaleDateString` puede variar entre runtimes.
+- **La API no soporta crear embeds externos** vía content updates. Solo embeds internos a páginas Notion. Embeds de iframes externos (Vercel, etc.) los agrega el usuario manualmente con `/embed`.
+- **Eliminar permanentemente desde la papelera no se puede vía API**. Solo el usuario en la UI.
+
+### Código
+- **Antes de pedir un widget nuevo, abrir los existentes y revisarlos.** Riesgo: duplicar funcionalidad (ej. `index.html` ya muestra las 5 barras → no hace falta `stats.html`).
+- **No confiar en propiedades intermedias de Notion (fórmulas/rollups) como fuente de verdad.** Sumar manualmente desde componentes individuales en el backend si la lógica es crítica.
+- **Endpoints POST que mutan datos requieren auth si la URL puede filtrarse.** Para uso privado individual sin compartir embed, no es crítico. Para embeds compartidos, agregar header secreto.
+- **Cuando un endpoint devuelve `[]`, distinguir entre lista vacía y error.** Mostrar el `error` real en el frontend, no asumir "sin resultados".
+
+### Proceso (trabajar con el asistente)
+- **Cuando un asistente AI hace cambios estructurales en herramientas críticas (Notion, GitHub, infra), hacer checkpoint antes y diff después.** Si no, capas nuevas se construyen sobre cimientos rotos. Lo que cuesta 5 min de revisión te ahorra 2 hs de debug.
+- **Validar la memoria contra la fuente actual antes de decir "está mal".** El "260 XP" del bug original era memoria desactualizada, no un valor presente en Notion.
+- **Pedir el dato crudo (JSON, screenshot) en el primer turn de debug, no esperar a iterar.** Acelera el diagnóstico.
+- **El asistente debe verificar IDs/URLs/sintaxis contra la fuente real (MCP/web) antes de codificar**, no asumir desde contexto previo. Aplica especialmente a IDs de Notion, sintaxis de embeds, y nombres de propiedades.
