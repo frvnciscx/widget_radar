@@ -1,3 +1,50 @@
+// Helper compartido para llamadas a Notion
+const NOTION_HEADERS = (token) => ({
+  'Authorization': `Bearer ${token}`,
+  'Notion-Version': '2022-06-28',
+  'Content-Type': 'application/json',
+});
+
+/**
+ * Resuelve un rollup truncado vía /v1/pages/{page_id}/properties/{property_id}.
+ * Cuando databases.query devuelve null en un rollup grande, este endpoint
+ * pagina los items y permite sumar manualmente.
+ * Retorna un número (suma) o null si no se pudo resolver.
+ */
+async function resolveTruncatedRollup(token, pageId, propertyId) {
+  let cursor = null;
+  let total = 0;
+  let resolved = false;
+
+  do {
+    const url = `https://api.notion.com/v1/pages/${pageId}/properties/${propertyId}`
+              + (cursor ? `?start_cursor=${cursor}&page_size=100` : `?page_size=100`);
+    const r = await fetch(url, { headers: NOTION_HEADERS(token) });
+    if (!r.ok) return null;
+    const data = await r.json();
+
+    // Caso 1: el endpoint resuelve directamente como rollup.number → usalo
+    if (data.object === 'property_item' && data.type === 'rollup' && data.rollup?.type === 'number') {
+      return data.rollup.number ?? 0;
+    }
+
+    // Caso 2: el endpoint devuelve una lista paginada con items
+    if (data.object === 'list' && Array.isArray(data.results)) {
+      for (const item of data.results) {
+        if (item.type === 'number')                                           total += item.number ?? 0;
+        else if (item.type === 'formula' && item.formula?.type === 'number')  total += item.formula.number ?? 0;
+        else if (item.type === 'rollup'  && item.rollup?.type  === 'number')  total += item.rollup.number ?? 0;
+      }
+      cursor = data.has_more ? data.next_cursor : null;
+      resolved = true;
+    } else {
+      break;
+    }
+  } while (cursor);
+
+  return resolved ? total : null;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET');
@@ -10,20 +57,12 @@ export default async function handler(req, res) {
     const [personajeRes, statsRes] = await Promise.all([
       fetch(`https://api.notion.com/v1/databases/${PERSONAJE_DB}/query`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${NOTION_TOKEN}`,
-          'Notion-Version': '2022-06-28',
-          'Content-Type': 'application/json',
-        },
+        headers: NOTION_HEADERS(NOTION_TOKEN),
         body: JSON.stringify({ page_size: 1 }),
       }),
       fetch(`https://api.notion.com/v1/databases/${STATS_DB}/query`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${NOTION_TOKEN}`,
-          'Notion-Version': '2022-06-28',
-          'Content-Type': 'application/json',
-        },
+        headers: NOTION_HEADERS(NOTION_TOKEN),
         body: JSON.stringify({ page_size: 10 }),
       }),
     ]);
@@ -38,32 +77,44 @@ export default async function handler(req, res) {
     const readNumeric = (prop) => {
       const p = props[prop];
       if (!p) return null;
-      if (p.type === 'number')  return (p.number  ?? 0);
-      if (p.type === 'formula') return (p.formula?.number ?? 0);
-      if (p.type === 'rollup')  return (p.rollup?.number  ?? 0);
+      if (p.type === 'number')  return (p.number  ?? null);
+      if (p.type === 'formula') return (p.formula?.number ?? null);
+      if (p.type === 'rollup')  return (p.rollup?.number  ?? null);
       return null;
     };
 
-    const getString = (prop) => props[prop]?.formula?.string || '';
-
-    // --- XP TOTAL ---
-    // 1) Preferir la propiedad calculada en Notion ("XP Total" como fórmula)
-    // 2) Fallback: sumar componentes con detección de tipo
+    // --- COMPONENTES de XP ---
+    // Para cada componente: leer valor; si rollup viene null, intentar resolver vía /pages/{id}/properties/{propId}
     const componentNames = [
       'XP Físico', 'XP Mente', 'XP Hábitos', 'XP Nutrición', 'XP Negocio',
       'XP Hábitos Auto', 'XP Auto',
     ];
 
     const xpComponents = {};
-    componentNames.forEach(n => { xpComponents[n] = readNumeric(n); });
+    const xpResolutionLog = {};
 
-    let xpTotal = readNumeric('XP Total');
-    let xpSource = 'XP Total (Notion)';
+    for (const name of componentNames) {
+      let val = readNumeric(name);
+      let source = 'direct';
 
-    if (xpTotal == null) {
-      xpTotal  = componentNames.reduce((sum, n) => sum + (xpComponents[n] || 0), 0);
-      xpSource = 'suma de componentes';
+      // Si es un rollup que vino null, intentar el endpoint de pages.properties
+      if (val == null && props[name]?.type === 'rollup' && props[name]?.id) {
+        const resolved = await resolveTruncatedRollup(NOTION_TOKEN, page.id, props[name].id);
+        if (resolved != null) {
+          val = resolved;
+          source = 'pages.properties (paginated)';
+        }
+      }
+
+      xpComponents[name] = val ?? 0;
+      xpResolutionLog[name] = { value: val, source: val == null ? 'unresolved' : source };
     }
+
+    // --- XP TOTAL ---
+    // Calcular SIEMPRE manualmente sumando componentes resueltos.
+    // (La fórmula "XP Total" de Notion depende del rollup roto y devuelve un valor incompleto.)
+    const xpTotal = componentNames.reduce((sum, n) => sum + (xpComponents[n] || 0), 0);
+    const xpTotalNotion = readNumeric('XP Total'); // sólo para diagnóstico
 
     const nivel  = Math.floor(xpTotal / 500) + 1;
     const rangos = ['💀 Iniciado','🗡️ Aprendiz','📖 Practicante','🛡️ Especialista','💎 Experto','🔥 Maestro','⚔️ Gran Maestro','👑 Leyenda'];
@@ -85,22 +136,6 @@ export default async function handler(req, res) {
       if (name.includes('Negocio'))   statMap.negocio   = xp;
     }
 
-    // Diagnóstico full: todas las propiedades numéricas (number/formula.number/rollup.number)
-    // y todas las strings de fórmula. Permite identificar la propiedad correcta sin endpoints extra.
-    const allNumeric = {};
-    const allStrings = {};
-    for (const [key, val] of Object.entries(props)) {
-      if (val.type === 'number')  allNumeric[key] = { type: 'number',  value: val.number };
-      if (val.type === 'formula') {
-        if (val.formula?.type === 'number') allNumeric[key] = { type: 'formula.number', value: val.formula.number };
-        if (val.formula?.type === 'string') allStrings[key] = { type: 'formula.string', value: val.formula.string };
-      }
-      if (val.type === 'rollup') {
-        if (val.rollup?.type === 'number') allNumeric[key] = { type: 'rollup.number', value: val.rollup.number };
-        if (val.rollup?.type === 'array')  allNumeric[key] = { type: 'rollup.array',  value: val.rollup.array?.length, sample: val.rollup.array?.[0] };
-      }
-    }
-
     res.status(200).json({
       fisico:    statMap.fisico    || 0,
       mente:     statMap.mente     || 0,
@@ -111,12 +146,11 @@ export default async function handler(req, res) {
       nivel,
       rango,
       barraXP,
-      // Diagnóstico (visible en /api/stats sin afectar widgets)
       _debug: {
-        xpSource,
+        xpSource: 'manual sum (with rollup resolution)',
+        xpTotalNotion,
         xpComponents,
-        allNumericProps: allNumeric,
-        allStringProps: allStrings,
+        xpResolutionLog,
       },
     });
 
