@@ -22,6 +22,7 @@ radar-widget/
 │   ├── stats.js          ← Lee DB Personaje + DB Stats (con bypass de rollups rotos)
 │   ├── registro.js       ← GET hábitos del día (filtro Fecha=hoy, TZ México)
 │   ├── habit-toggle.js   ← POST cambiar estado de un hábito (PATCH a Notion)
+│   ├── misiones.js       ← GET misiones con progreso calculado (cruza Misiones↔Hábitos↔Registros)
 │   └── debug.js          ← Muestra raw JSON de Notion para debugging
 ├── index.html            ← Radar de stats (widget activo)
 ├── personaje.html        ← HUD de nivel/XP/rango (widget activo)
