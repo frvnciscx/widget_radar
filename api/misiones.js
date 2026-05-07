@@ -43,14 +43,24 @@ export default async function handler(req, res) {
   const NOTION_TOKEN = process.env.NOTION_TOKEN;
 
   try {
-    // 3 queries en paralelo: misiones, catálogo, registros completados
-    const [misionesRaw, catalogoRaw, registrosRaw] = await Promise.all([
+    // 3 queries en paralelo, tolerante a fallos individuales (allSettled)
+    const settled = await Promise.allSettled([
       queryDb(NOTION_TOKEN, MISIONES_DB),
       queryDb(NOTION_TOKEN, CATALOGO_DB),
       queryDb(NOTION_TOKEN, REGISTRO_DB, {
         filter: { property: 'Estado', select: { equals: '✅ Completado' } },
       }),
     ]);
+
+    const misionesRaw  = settled[0].status === 'fulfilled' ? settled[0].value : [];
+    const catalogoRaw  = settled[1].status === 'fulfilled' ? settled[1].value : [];
+    const registrosRaw = settled[2].status === 'fulfilled' ? settled[2].value : [];
+
+    const errores = {
+      misiones:  settled[0].status === 'rejected' ? settled[0].reason.message : null,
+      catalogo:  settled[1].status === 'rejected' ? settled[1].reason.message : null,
+      registros: settled[2].status === 'rejected' ? settled[2].reason.message : null,
+    };
 
     // Mapa hábitos: id → { nombre, xpValor, registrosIds }
     const habitosMap = {};
@@ -144,6 +154,7 @@ export default async function handler(req, res) {
         misionesCount: misionesRaw.length,
         catalogoCount: catalogoRaw.length,
         registrosCompletadosCount: registrosRaw.length,
+        errores,
       },
     });
   } catch (e) {
