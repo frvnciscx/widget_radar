@@ -1,31 +1,34 @@
-# Quest Log — Sistema de Gamificación de Vida en Notion
+# Life Gamification System for Notion — Universal Blueprint
 
-> Blueprint reutilizable para construir un sistema RPG de hábitos y objetivos personales sobre Notion, con backend de cálculo en Vercel y widgets interactivos. Inspiración estética y mecánica: Dark Souls.
+> Sistema de gamificación de hábitos y objetivos personales sobre Notion.  
+> **Mecánica universal, estética intercambiable.**  
+> Probado con tema Dark Souls; adaptable a fantasía clásica, sci-fi, jardín wholesome, minimalismo y cualquier otra temática.
 
-**Versión**: 1.0 — Mayo 2026  
-**Autor**: paco / Forja 3D  
-**Repo de referencia**: `frvnciscx/widget_radar` · `widgetradar.vercel.app`
+**Versión**: 2.0 — Mayo 2026  
+**Implementación de referencia**: github.com/frvnciscx/widget_radar · widgetradar.vercel.app
 
 ---
 
 ## Tabla de contenidos
 
 1. [Filosofía del sistema](#1-filosofía-del-sistema)
-2. [Visión general](#2-visión-general)
-3. [Arquitectura de datos](#3-arquitectura-de-datos-5-dbs)
+2. [Mecánica universal (abstracta)](#2-mecánica-universal-abstracta)
+3. [Arquitectura de datos](#3-arquitectura-de-datos)
 4. [Setup en Notion paso a paso](#4-setup-en-notion-paso-a-paso)
-5. [Mecánicas RPG](#5-mecánicas-rpg)
-6. [Stack técnico opcional](#6-stack-técnico-opcional-vercel--make)
-7. [Reglas operativas (lecciones)](#7-reglas-operativas-lecciones-aprendidas)
-8. [Roadmap de comercialización](#8-roadmap-de-comercialización)
-9. [Diferenciador vs competencia](#9-diferenciador-vs-templates-existentes)
+5. [Personalización por tema](#5-personalización-por-tema)
+6. [Galería de temas pre-diseñados](#6-galería-de-temas-pre-diseñados)
+7. [Cómo crear tu propio tema](#7-cómo-crear-tu-propio-tema)
+8. [Stack técnico opcional](#8-stack-técnico-opcional-vercel--make)
+9. [Reglas operativas (lecciones)](#9-reglas-operativas-lecciones-aprendidas)
+10. [Roadmap de comercialización](#10-roadmap-de-comercialización)
+11. [Diferenciador vs competencia](#11-diferenciador-vs-templates-existentes)
 
 ---
 
 ## 1. Filosofía del sistema
 
 **Lo que es:**
-- Tracking honesto de hábitos y misiones de vida
+- Tracking honesto de hábitos y objetivos de vida
 - Mecánica de juego con consecuencias reales (positivas y negativas)
 - Métricas medibles que reflejan realidad, no aspiración
 - Sistema que **te castiga cuando fallás**, no solo te felicita cuando cumplís
@@ -36,120 +39,150 @@
 - Templates estéticos sin profundidad mecánica
 
 **Reglas operativas innegociables:**
-1. Cada stat debe tener **al menos 1 hábito activo que la alimente**. Si no, eliminala — no es una stat, es decoración.
-2. Cada misión debe tener **métrica medible** (ej: "30 días de X", "12 libros", "100 sesiones"). Sin métrica, es aspiración.
+1. Cada atributo debe tener **al menos 1 hábito activo que lo alimente**. Sin eso es decoración.
+2. Cada objetivo debe tener **métrica medible** (ej: "30 días de X", "12 unidades", "100 sesiones"). Sin métrica, es aspiración.
 3. **Cada feature agregada es deuda futura.** Probar 7 días antes de agregar capa nueva.
-4. **No mientas.** Si un hábito está al 100% pero solo lo hiciste 1 vez en 30 días, hay un bug de diseño, no de motivación.
+4. **No mientas.** Si un objetivo está al 100% pero solo hiciste la acción 1 vez en 30 días, hay un bug de diseño, no de motivación.
 
 ---
 
-## 2. Visión general
+## 2. Mecánica universal (abstracta)
+
+Esta mecánica es **independiente del tema**. Los nombres que aparecen acá son genéricos; cada tema los renombra (ver sección 5).
+
+### 2.1 Sistema de Puntos / Nivel / Tier
+- Hábitos completados suman **Puntos**
+- Cada `N` Puntos = 1 Nivel (sugerido: N=500)
+- 8 Tiers o "rangos" en escalera (Tier 1 → Tier 8)
+- Cada Tier tiene un nombre temático (ver galería)
+
+### 2.2 Atributos (5 dimensiones del usuario)
+- 5 atributos representan áreas de vida que el usuario quiere desarrollar
+- Por defecto: Físico / Mente / Nutrición / Hábitos / Negocio
+- Personalizable: Spirit / Body / Craft / Connection / Wealth, o cualquier set
+- Cada hábito alimenta 1 atributo específico
+
+### 2.3 Tipo de Hábito (la innovación clave)
+Dos categorías formales en el modelo de datos:
+- **Construir** — cosas que querés HACER (ejercicio, leer, meditar)
+- **Evitar** — cosas que querés DEJAR de hacer (azúcar, scroll redes, alcohol)
+
+Para los Evitar, el lenguaje del estado se invierte:
+- `✅ Cumplido` = "lo evité hoy" (positivo, suma puntos)
+- `❌ No cumplido` = "caí, lo hice" (negativo, resta del **Pool de Integridad**)
+
+### 2.4 Pool de Integridad (recurso protegido)
+- Pool inicial: **5** (cap superior 5, cap inferior 0)
+- **Cae −1** al fallar un hábito Evitar
+- **Sube +1** al revertir un fallo (anti-doble-conteo)
+- Estados visuales: Pleno (5) / Comprometido (1–4) / Drenado (0)
+- En estado Drenado, los widgets cambian a paleta apagada (señal visual de urgencia)
+
+> Esta es la mecánica diferenciadora. Le da peso emocional al sistema: cuando caés, hay consecuencia.
+
+### 2.5 Frecuencia de Hábitos
+Resuelve el problema de hábitos no-diarios (ej: "post en redes 1×/semana"):
+- **Diario** — automatización crea entrada cada mañana
+- **Semanal** — usuario crea registro manualmente cuando lo hace
+- **Eventual** — sin patrón fijo, manual
+
+### 2.6 Veces Target en Objetivos
+Los objetivos largos (ej: "30 días de meditación") necesitan target medible:
+- `Progreso = veces_cumplidas / Veces Target × 100`
+- Sin Veces Target: cálculo fallback impreciso (puede dar 100% engañoso al primer cumplimiento)
+- **Recomendación universal**: definir Veces Target a TODOS los objetivos
+
+---
+
+## 3. Arquitectura de datos
+
+5 DBs en Notion. Los nombres pueden traducirse al tema; aquí van los **nombres funcionales**:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │              📋 Catálogo de Hábitos                     │
-│  Lista maestra. XP Valor, Stat, Frecuencia, Tipo        │
+│  Lista maestra. Valor en puntos, atributo, tipo, freq.  │
 └──────────────┬──────────────────────────────┬───────────┘
                │ relation                     │ relation
                ▼                              ▼
 ┌──────────────────────────┐     ┌──────────────────────────┐
-│   📅 Registro Diario      │     │     ⚔️ Misiones          │
-│  Make crea cada mañana    │     │  Objetivos largo plazo   │
-│  Estado: ⬜/✅/❌          │     │  Veces Target            │
+│      📅 Bitácora          │     │      🎯 Objetivos         │
+│  Una entrada por día x    │     │  Metas mediano/largo plz │
+│  hábito. Estado: ⬜/✅/❌ │     │  Veces Target            │
 └──────────┬───────────────┘     └──────────────────────────┘
-           │ rollup XP                          
+           │ rollup puntos                      
            ▼                                    
 ┌─────────────────────────────────────────────────────────┐
-│                    🧙 Personaje                          │
-│  XP Total · Nivel · Rango · Humanidad · Estado          │
+│                  🧙 Personaje                            │
+│  Puntos · Nivel · Tier · Integridad · Estado            │
 └─────────────────────────┬───────────────────────────────┘
-                          │ rollup por categoría
+                          │ rollup por atributo
                           ▼
                 ┌─────────────────────┐
-                │     📊 Stats         │
-                │  Físico · Mente ·    │
-                │  Nutrición · etc.    │
+                │     📊 Atributos    │
+                │  5 dimensiones del  │
+                │  personaje          │
                 └─────────────────────┘
 ```
 
-**Flujo de un día típico:**
-1. **6:00 AM** — Make crea entradas del día en Registro Diario (1 por hábito Diario activo)
-2. **Durante el día** — usuario marca ✅ Completado / ❌ Omitido en cada hábito (web, mobile, widget)
-3. **Al marcar** — XP suma automático en Stats vía rollups; Humanidad cae si fue Prohibido
-4. **23:00 / Cron** — endpoint de sync recalcula progreso de cada Misión y lo escribe en Notion
-
----
-
-## 3. Arquitectura de datos (5 DBs)
-
-### 📋 Catálogo de Hábitos
-**Propósito**: lista maestra de qué se puede hacer, valor en XP, qué stat alimenta.
-
+### 3.1 Catálogo de Hábitos
 | Propiedad | Tipo | Notas |
 |-----------|------|-------|
-| Hábito | title | Nombre con emoji (ej: `💪 Sesión de ejercicio`) |
-| Stat | select | 5 opciones (tu elección) — define qué stat sube |
-| Categoría | select | Agrupador visual (Ejercicio, Aprendizaje, etc.) |
-| XP Valor | number | Sugerencia: 10 (corto), 15 (medio), 20-25 (alto) |
-| Activo | select | `✅ Activo` / `⏸️ Pausado` |
-| Frecuencia | select | `📅 Diario` / `📆 Semanal` / `🎯 Eventual` |
-| Tipo | select | `🟢 Construir` (hacer) / `🔴 Prohibido` (evitar) |
-| Misiones | relation (dual) | A qué misiones contribuye |
-| Registros | relation | A las entradas de Registro Diario |
+| Hábito | title | Nombre del hábito |
+| Atributo | select | 5 opciones (las 5 dimensiones del usuario) |
+| Categoría | select | Agrupador visual |
+| Valor | number | Puntos por cumplimiento (sugerido: 10 / 15 / 20–25) |
+| Activo | select | `Activo` / `Pausado` |
+| Frecuencia | select | `Diario` / `Semanal` / `Eventual` |
+| Tipo | select | `Construir` / `Evitar` |
+| Objetivos | relation (dual) | A qué objetivos contribuye |
+| Registros | relation | A las entradas de Bitácora |
 
-### 📅 Registro Diario
-**Propósito**: una entrada por hábito por día. Es donde se marca el cumplimiento real.
-
+### 3.2 Bitácora (Registro Diario)
 | Propiedad | Tipo | Notas |
 |-----------|------|-------|
-| Entrada | title | Texto del hábito (Make lo copia del Catálogo) |
-| Estado | select | `⬜ Pendiente` / `✅ Completado` / `❌ Omitido` |
+| Entrada | title | Texto del hábito |
+| Estado | select | `Pendiente` / `Cumplido` / `No cumplido` |
 | Fecha | date | El día al que aplica |
-| Hábito Ref | relation | Vincula al hábito del Catálogo |
-| Personaje | relation | Vincula al Personaje (1 si solo vos, varios si app multi-user) |
-| Stat Ref | relation | A la DB Stats (para rollup por categoría) |
-| XP Base | rollup | Trae XP Valor del Catálogo via Hábito Ref |
-| XP Ganado | formula | `if(prop("Estado") == "✅ Completado", prop("XP Base"), 0)` |
+| Hábito Ref | relation | Vincula al Catálogo |
+| Personaje | relation | Al usuario (1 si single-user, varios si multi) |
+| Atributo Ref | relation | A la DB Atributos |
+| Valor Base | rollup | Trae Valor del Catálogo via Hábito Ref |
+| Valor Ganado | formula | `if(Estado == "Cumplido", Valor Base, 0)` |
 
-### 🧙 Personaje
-**Propósito**: tu ficha gamificada. Acumula XP via rollups, calcula nivel/rango/humanidad.
-
+### 3.3 Personaje
 | Propiedad | Tipo | Notas |
 |-----------|------|-------|
-| Nombre | title | Tu nombre o alter-ego del juego |
-| Clase | text | Descriptiva (ej: "Bearer of the Curse") |
-| XP Físico/Mente/Nutrición/etc. | number | XP manual histórico (5 props, una por stat) |
-| XP Auto | rollup | Sum de `XP Ganado` via Registros diarios |
-| XP Total | formula | Suma de todos los XP (manual + auto) |
-| Nivel | formula | `floor(prop("XP Total") / 500) + 1` |
-| Rango | formula | Etiqueta según nivel (8 escalones) |
-| Barra XP | formula | Visualización con caracteres ▰▱ |
-| **Humanidad** | number | Default 5, cap 0–5 |
-| **Estado Personaje** | formula | `if(Humanidad >= 5, "🪙 Humano", if(Humanidad > 0, "🩸 Maldito", "💀 Hueco"))` |
-| Registros diarios | relation | A todos los registros del personaje |
+| Nombre | title | Nombre del usuario o alter-ego |
+| Clase | text | Descriptor opcional (ej: "Aprendiz", "Founder", "Athlete") |
+| Puntos manuales (5 props) | number | Histórico inicial por atributo |
+| Puntos Auto | rollup | Sum de Valor Ganado via Bitácora |
+| Puntos Total | formula | Suma de manuales + auto |
+| Nivel | formula | `floor(Puntos Total / 500) + 1` |
+| Tier | formula | Etiqueta según nivel (8 escalones, según tema) |
+| Barra | formula | Visualización con caracteres ▰▱ |
+| **Integridad** | number | Default 5, cap 0–5 |
+| **Estado** | formula | `if(Integridad >= 5, "Pleno", if(Integridad > 0, "Comprometido", "Drenado"))` |
+| Bitácora | relation | A todos los registros |
 
-### 📊 Stats
-**Propósito**: 5 atributos del personaje. Cada uno acumula XP de su categoría.
-
+### 3.4 Atributos (5 dimensiones)
 | Propiedad | Tipo |
 |-----------|------|
-| Stat | title (ej: `💪 Físico`) |
-| Registros | relation a Registro Diario |
-| XP Total Stat | rollup sum de `XP Ganado` filtrado por Stat Ref |
+| Atributo | title |
+| Registros | relation a Bitácora |
+| Total Atributo | rollup sum de Valor Ganado |
 
-### ⚔️ Misiones
-**Propósito**: objetivos de mediano y largo plazo, vinculados a hábitos que las avanzan.
-
+### 3.5 Objetivos
 | Propiedad | Tipo |
 |-----------|------|
-| Misión | title |
-| Tipo | select: Principal / Secundaria / Diaria / Jefe Final |
-| Categoría | select: 5 stats + Personal |
-| Estado | select: 🔒 Bloqueada / 🔥 Activa / ⚔️ En progreso / ✅ Completada / 💀 Abandonada |
-| Dificultad | select: ⭐ → 💀 Épica |
-| XP Recompensa | number |
+| Objetivo | title |
+| Tipo | select: Principal / Secundario / Diario / Final |
+| Categoría | select: 5 atributos + Personal |
+| Estado | select: Bloqueado / Activo / En progreso / Cumplido / Abandonado |
+| Dificultad | select: Fácil / Normal / Difícil / Épico |
+| Recompensa | number (puntos al completarlo) |
 | Progreso | number 0–100 (escrito por sync endpoint) |
-| **Veces Target** | number | Cuántas veces hay que cumplir hábitos asociados (target real para misiones streak) |
+| **Veces Target** | number | Target real para misiones streak/count |
 | Hábitos asociados | relation dual al Catálogo |
 | Fecha límite | date (opcional) |
 | Notas | text |
@@ -160,190 +193,241 @@
 
 **Orden importante** (las relations requieren que ambas DBs existan primero):
 
-1. Crear las 5 DBs vacías con sus propiedades básicas (sin relations).
+1. Crear las 5 DBs vacías con sus propiedades básicas (sin relations todavía).
 2. Crear las relations en este orden:
-   - Catálogo ↔ Registro Diario (vía `Registros` / `Hábito Ref`)
-   - Personaje ↔ Registro Diario (vía `Registros diarios` / `Personaje`)
-   - Stats ↔ Registro Diario (vía `Registros` / `Stat Ref`)
-   - **Catálogo ↔ Misiones** (dual: `Misiones` / `Hábitos asociados`)
-3. Crear las fórmulas (XP Ganado, XP Total, Nivel, Rango, Barra XP, Estado Personaje).
-4. Crear los rollups (XP Auto en Personaje, XP Total Stat en Stats, Veces Target en Misiones).
-5. Crear el personaje principal con `Humanidad = 5`.
-6. Llenar el Catálogo con tus hábitos iniciales (recomendado: 8–12 para empezar).
-7. Crear vistas en Registro Diario:
+   - Catálogo ↔ Bitácora (vía `Registros` / `Hábito Ref`)
+   - Personaje ↔ Bitácora (vía `Bitácora` / `Personaje`)
+   - Atributos ↔ Bitácora (vía `Registros` / `Atributo Ref`)
+   - **Catálogo ↔ Objetivos** (relation dual)
+3. Crear las fórmulas (Valor Ganado, Puntos Total, Nivel, Tier, Barra, Estado).
+4. Crear los rollups (Puntos Auto, Total Atributo, Veces Target).
+5. Crear el personaje principal con `Integridad = 5`.
+6. Llenar el Catálogo con 8–12 hábitos iniciales.
+7. Crear vistas en Bitácora:
    - **Hoy**: filtro `Fecha is today`
    - **Default**: tabla con todas las entradas
 
 ---
 
-## 5. Mecánicas RPG
+## 5. Personalización por tema
 
-### XP / Nivel / Rango (8 escalones)
+La mecánica universal de la sección 2 se mantiene. Lo que cambia entre temas:
 
-```
-Nivel 1 — 💀 Iniciado     —    0 XP
-Nivel 2 — 🗡️ Aprendiz     —  500 XP
-Nivel 3 — 📖 Practicante  — 1000 XP
-Nivel 4 — 🛡️ Especialista — 1500 XP
-Nivel 5 — 💎 Experto      — 2000 XP
-Nivel 6 — 🔥 Maestro      — 2500 XP
-Nivel 7 — ⚔️ Gran Maestro — 3000 XP
-Nivel 8 — 👑 Leyenda      — 3500 XP
-```
+- **Naming** (cómo llamamos a Puntos, Tiers, Integridad, etc.)
+- **Emojis y íconos**
+- **Paleta de colores y fuentes**
+- **Mensajes y taglines**
 
-### Humanidad (mecánica original — diferenciador)
+### Tabla de traducción universal
 
-- Pool inicial: **5**
-- **Pierde 1** cuando marcás un Hábito Prohibido como `❌ Omitido` (= "caí, lo hice")
-- **Recupera 1** si revertís ese Omitido a otro estado (anti-doble-conteo)
-- Cap inferior: 0 · Cap superior: 5
-
-**Visualización en widgets:**
-- 5 pips visuales (●●●●●)
-- Estado textual: `🪙 Humano` (5) / `🩸 Maldito` (1–4) / `💀 Hueco` (0)
-- En Hueco, todo el HUD muta a paleta gris-frío (sin dorado)
-
-**Reglas adicionales (manuales por ahora):**
-- +1 al completar misión `💀 Épica`
-- +1 al mantener racha de 3 días sin caer en ningún Prohibido
-- −1 al fallar 3+ hábitos diarios mismo día
-
-### Hábitos Prohibidos (cubre dimensión "evitar")
-
-La mayoría de habit trackers solo modelan "cosas que querés hacer". Este sistema agrega **"cosas que querés DEJAR de hacer"**:
-
-- En el Catálogo, propiedad `Tipo`: `🟢 Construir` o `🔴 Prohibido`
-- Para Prohibidos, el lenguaje se invierte:
-  - `✅ Completado` = "lo evité hoy" (positivo, suma XP)
-  - `❌ Omitido` = "caí, lo hice" (negativo, −1 Humanidad)
-- Ejemplos: "Sin azúcar", "Sin scroll redes >30min", "Sin alcohol entre semana"
-
-### Frecuencia (resuelve hábitos no-diarios)
-
-```
-📅 Diario     — Make crea entrada cada mañana
-📆 Semanal    — usuario crea registro manualmente cuando lo hace (ej: post en redes 1×/semana)
-🎯 Eventual   — sin patrón, manual (ej: viaje a Buenos Aires)
-```
-
-Make filtra: solo crea entradas para `Frecuencia = 📅 Diario` AND `Activo = ✅ Activo`.
-
-### Veces Target en Misiones (progreso honesto)
-
-Notion API NO permite multi-hop rollups (`rollup of rollup`). Por eso el progreso de misiones se calcula en backend:
-
-- Si la misión tiene `Veces Target > 0`:  
-  `progreso = completadosTotal / Veces Target × 100` (capeado a 100)
-- Sin `Veces Target`: fallback a `xpAcumulado / xpTargetRound`. Para misiones con un solo hábito asociado y completarlo 1 vez, esto da 100% engañoso. **Recomendado**: definir Veces Target explícitamente.
-
-**Ejemplos honestos:**
-- "30 días de lectura" → `Veces Target = 30`
-- "12 libros" → `Veces Target = 24` (estimando 2 sesiones por libro)
-- "Construir cuerpo de guerrero" → `Veces Target = 90` (3 meses, 3×/semana)
+| Mecánica universal | Dark Souls | Fantasy Clásico | Sci-fi | Wholesome (Jardín) | Minimalista |
+|---|---|---|---|---|---|
+| Puntos | XP / Almas | Experience | Credits | Semillas | Points |
+| Nivel | Nivel | Level | Tier | Floración | Level |
+| Tier 1 | 💀 Iniciado | 🌱 Novato | 🛰️ Cadete | 🌱 Brote | Tier 1 |
+| Tier 4 | 🛡️ Especialista | 🛡️ Caballero | 🚀 Oficial | 🌳 Árbol | Tier 4 |
+| Tier 8 | 👑 Leyenda | 🐉 Legendario | 👑 Almirante | 🌲 Bosque | Master |
+| Pool protegido | Humanidad | Vitalidad | Integridad | Salud del Jardín | Streak Credit |
+| Estado pleno | 🪙 Humano | ❤️ Vivaz | ✅ Operativo | 🌸 Floreciendo | Active |
+| Estado caído | 💀 Hueco | 💀 Drenado | ⚠️ Comprometido | 🥀 Marchito | Inactive |
+| Hábito a hacer | Construir | Práctica | Misión | Plantar | Build |
+| Hábito a evitar | Prohibido | Tentación | Riesgo | Plaga | Avoid |
+| Objetivo | Misión | Quest | Mission | Cosecha | Goal |
+| Cumplido | ✅ Completado | ✅ Hecho | ✅ Resuelto | 🌿 Crecido | ✅ Done |
+| Fallado | ❌ Omitido | ❌ Fallado | ❌ Abortado | 🥀 Caído | ❌ Skipped |
 
 ---
 
-## 6. Stack técnico opcional (Vercel + Make)
+## 6. Galería de temas pre-diseñados
+
+### 🗡️ Tema 1: Dark Souls / Fantasía Oscura (implementación de referencia)
+
+**Audiencia**: gamers, nostalgia souls-likes, gente que necesita un sistema "exigente"  
+**Tono**: épico, sombrío, brutal-honesto
+
+**Naming clave:**
+- Puntos = XP · Pool = Humanidad · Estados = Humano / Maldito / Hueco
+- Tiers: 💀 Iniciado · 🗡️ Aprendiz · 📖 Practicante · 🛡️ Especialista · 💎 Experto · 🔥 Maestro · ⚔️ Gran Maestro · 👑 Leyenda
+
+**Paleta**: dorado hueso (`#d4c5a0`), gris ceniza, fondo transparente sobre Notion oscuro  
+**Fuentes**: Playfair Display + DM Mono (o Cinzel + IM Fell English para más medieval)  
+**Tagline**: *"Praise the Sun · Kindle the Ember · Link the Fire"*
+
+---
+
+### ⚔️ Tema 2: Fantasy Clásico (D&D / MMORPG)
+
+**Audiencia**: jugadores de D&D, lectores de fantasía épica, RPG enthusiasts  
+**Tono**: heroico, cálido, aventurero
+
+**Naming clave:**
+- Puntos = Experience · Pool = Vitalidad · Estados = Vivaz / Herido / Caído
+- Tiers: 🌱 Novato · 🗡️ Aventurero · 🛡️ Caballero · 🐺 Veterano · ⚔️ Campeón · 🏰 Heroe · 🐉 Maestro · 👑 Legendario
+
+**Paleta**: rojo borgoña (`#8b3a3a`), oro brillante (`#d4af37`), pergamino crema  
+**Fuentes**: Cinzel (heroica) + Cardo (texto)  
+**Tagline**: *"For honor, for glory, for the realm"*
+
+---
+
+### 🚀 Tema 3: Sci-fi / Cyberpunk
+
+**Audiencia**: tech professionals, fans de Black Mirror / Cyberpunk 2077  
+**Tono**: técnico, frío, eficiente
+
+**Naming clave:**
+- Puntos = Credits · Pool = Integridad · Estados = Operativo / Comprometido / Offline
+- Tiers: 🛰️ Cadete · ⚙️ Técnico · 🚀 Oficial · 🛸 Ingeniero · 💻 Comandante · 🤖 Almirante · 🌌 Maestro · 👑 Singularidad
+
+**Paleta**: cyan neón (`#00ffff`), magenta (`#ff00ff`), negro profundo  
+**Fuentes**: JetBrains Mono o Space Mono (todo monoespaciado)  
+**Tagline**: *"System online · Awaiting input · Excellence is metric"*
+
+---
+
+### 🌿 Tema 4: Wholesome / Jardín
+
+**Audiencia**: gente burnout, mindfulness, anti-hustle culture, slow living  
+**Tono**: suave, orgánico, esperanzador
+
+**Naming clave:**
+- Puntos = Semillas · Pool = Salud del Jardín · Estados = Floreciendo / Marchito / Latente
+- Tiers: 🌱 Brote · 🌿 Hierba · 🌳 Árbol joven · 🌲 Árbol fuerte · 🌳 Roble · 🌸 Bosque · 🌺 Santuario · 🦋 Edén
+
+**Paleta**: verde sage (`#9caf88`), terracota (`#c87f5b`), papel reciclado  
+**Fuentes**: Lora (cálida) + Karla (sans serif suave)  
+**Tagline**: *"Plantá. Regá. Esperá. El jardín crece a su tiempo"*
+
+---
+
+### ⬜ Tema 5: Minimalista (sin tema)
+
+**Audiencia**: corporate, design lovers, gente que NO quiere narrativa, solo data  
+**Tono**: neutro, eficiente, datos puros
+
+**Naming clave:**
+- Puntos = Points · Pool = Streak Credit · Estados = Active / Compromised / Inactive
+- Tiers: T1 · T2 · T3 · T4 · T5 · T6 · T7 · T8 (literal, sin emoji)
+
+**Paleta**: monocromática (negro / gris medio / blanco), un solo accent (azul `#0066cc`)  
+**Fuentes**: Inter o IBM Plex (todo lo mismo)  
+**Tagline**: ninguna o "Track. Measure. Improve."
+
+---
+
+## 7. Cómo crear tu propio tema
+
+Si ninguno de los 5 te encaja, diseñá uno custom en 6 pasos:
+
+**Paso 1 — Define el TONO en una frase**  
+Ej: "Quiero un sistema que se sienta como pintar un lienzo en blanco" / "Como entrenamiento militar" / "Como cuidar un bonsái"
+
+**Paso 2 — Elegí 8 Tiers con narrativa coherente**  
+Tier 1 debe ser "principiante humilde". Tier 8 debe ser "máximo aspiracional". Los 6 del medio progresan en una historia.
+
+**Paso 3 — Definí cómo se llama el Pool de Integridad y sus 3 estados**  
+El estado caído debe sentirse como **algo que querés evitar** (no neutral). Ej: "Drenado" pesa más que "Inactive".
+
+**Paso 4 — Elegí paleta (3 colores + 1 accent)**  
+- Color de fondo (típicamente transparente)
+- Color de texto principal
+- Color de texto secundario  
+- Color accent (botones, valores destacados)
+
+**Paso 5 — Elegí 2 fuentes complementarias**  
+- Una serif/decorativa para títulos
+- Una sans/monoespaciada para datos
+
+**Paso 6 — Tagline (opcional pero recomendado)**  
+1 frase que capture el espíritu. Aparece en footer de widgets.
+
+---
+
+## 8. Stack técnico opcional (Vercel + Make)
+
+> Si solo querés el template Notion, podés saltearte esta sección. Funciona sin código.
 
 ### Make automation (escenario diario)
-
 **Trigger**: 6:00 AM zona del usuario  
-**Steps:**
-1. **Notion → Search Objects** en Catálogo de Hábitos  
-   Filtros: `Activo = ✅ Activo` AND `Frecuencia = 📅 Diario`
-2. **Iterator** sobre los hábitos resultantes
-3. **Notion → Create Data Source Item** en Registro Diario:
-   - Entrada: `{plain_text del hábito}`
-   - Hábito Ref: `{page_id del hábito}`
-   - Estado: `⬜ Pendiente`
-   - Fecha: `formatDate(now; "YYYY-MM-DD")`
-
-**Nota**: el campo Personaje no se puede asignar via Make (limitación API Notion). El XP se suma vía rollup directo sin necesitar esa relation.
+**Filter**: `Activo = ✅` AND `Frecuencia = Diario`  
+**Action**: para cada hábito, crear entrada en Bitácora con `Estado = Pendiente`, `Fecha = hoy`
 
 ### Vercel Serverless Functions
-
 | Endpoint | Método | Función |
 |----------|--------|---------|
-| `/api/stats` | GET | Personaje + Stats + Humanidad + Estado |
+| `/api/stats` | GET | Personaje + Atributos + Integridad + Estado |
 | `/api/registro` | GET | Hábitos del día (resuelve nombres del Catálogo, filtra pausados) |
-| `/api/habit-toggle` | POST | Cambia estado + auto-decremento Humanidad si Prohibido |
-| `/api/misiones` | GET | Progreso real cruzando 3 DBs |
-| `/api/sync-misiones` | GET/POST | Escribe Progreso a Notion (manual o cron) |
+| `/api/habit-toggle` | POST | Cambia estado + auto-decremento Integridad si Evitar |
+| `/api/objetivos` | GET | Progreso real cruzando 3 DBs |
+| `/api/sync-objetivos` | GET/POST | Escribe Progreso a Notion (manual o cron) |
 
-**Variables de entorno**: `NOTION_TOKEN` (de la integration interna).
+**Variables de entorno**: `NOTION_TOKEN` de la integration interna.
 
 ### Cron Job (vercel.json)
-
 ```json
 "crons": [
-  { "path": "/api/sync-misiones", "schedule": "0 5 * * *" }
+  { "path": "/api/sync-objetivos", "schedule": "0 5 * * *" }
 ]
 ```
 
-5:00 UTC = 23:00–00:00 México (depende de DST). Vercel free tier permite 1 cron diario.
-
 ### Widgets HTML embebibles
+- **Dashboard de atributos** — radar chart + barras
+- **HUD del personaje** — nivel, puntos, integridad
+- **Check-in del día** — lista interactiva con 3 botones por hábito
 
-Estética común: Playfair Display + DM Mono, dorado hueso `#d4c5a0`, transparente, 3 temas (oscuro/claro/sépia).
-
-- **Radar de stats** (`/`): radar chart SVG + 5 barras horizontales
-- **HUD Personaje** (`/personaje`): nivel grande, barra XP, **5 pips de Humanidad**, estado (Humano/Maldito/Hueco)
-- **Check-in del día** (`/registro`): lista interactiva con 3 botones por hábito, optimistic update + rollback en error
+Estética común: usar la paleta y fuentes del tema elegido.
 
 ---
 
-## 7. Reglas operativas (lecciones aprendidas)
+## 9. Reglas operativas (lecciones aprendidas)
 
 ### Notion API gotchas
 - **`database_id` ≠ `data_source_id`**. La API estándar usa el de la URL del navegador, no el `collection://...` interno.
 - **Mover una DB pierde permisos heredados.** Reconectar la integration explícitamente.
 - **Multi-hop rollups bloqueados**: error explícito `Cannot create a rollup of a related rollup property`. Calcular en backend.
 - **Fórmulas con `.map()` sobre relations dan Type error vía DDL**, aunque la UI las renderiza. Calcular en backend.
-- **Filtros `today` relativos no existen en API.** Calcular fecha en backend con TZ explícita.
+- **Filtros `today` relativos no existen en API.** Calcular fecha en backend con TZ explícita (`Intl.DateTimeFormat.formatToParts`).
 - **Embeds externos no se crean vía API**. Solo embeds internos a páginas Notion. Iframes externos requieren `/embed` manual.
 - **Rollups que apuntan a DBs en papelera devuelven `null`** mientras la UI muestra cache.
 
 ### Diseño
-- **Cada stat necesita ≥1 hábito que la alimente**. Sino es decoración.
-- **Cada misión necesita Veces Target** o aceptás cálculo impreciso.
-- **Resolver nombres desde el Catálogo (live)**, no desde el title histórico del Registro. Permite renombrar sin romper UI.
+- **Cada atributo necesita ≥1 hábito que lo alimente**. Sino es decoración.
+- **Cada objetivo necesita Veces Target** o aceptás cálculo impreciso.
+- **Resolver nombres desde el Catálogo (live)**, no desde el title histórico de la Bitácora.
 - **Endpoints POST que mutan datos** requieren auth si la URL puede filtrarse a terceros.
 
 ### Antipatterns que matan la motivación
-- **Misiones aspiracionales sin métrica** → quedan en 0% perpetuo y desmotivan
+- **Objetivos aspiracionales sin métrica** → quedan en 0% perpetuo y desmotivan
 - **Hábitos sin marcar consistentemente** → el sistema se vuelve teatro
 - **Múltiples capas sin probar** → deuda visual y mental
 - **100% engañoso** (sin Veces Target) → el sistema te miente y dejás de creerle
-
-### Trabajando con asistentes AI
-- **Checkpoint antes, diff después** de cualquier cambio estructural en herramientas críticas.
-- **Validar memoria contra fuente actual** antes de afirmar que algo está mal.
-- **Pedir el dato crudo (JSON/screenshot)** en el primer turn de debug.
-- **Verificar IDs/sintaxis contra fuente real** antes de codificar.
+- **Cambiar de tema cada semana** → diluye el sentido de progresión narrativa
 
 ---
 
-## 8. Roadmap de comercialización
+## 10. Roadmap de comercialización
 
 ### Tier 1 — MVP free (Notion template puro)
 **Qué incluye:**
-- Las 5 DBs con relations, fórmulas y rollups configurados
-- Documentación de uso (este README)
+- Las 5 DBs configuradas con relations, fórmulas y rollups
+- 1 tema preinstalado (a elección del comprador entre los 5)
+- Documentación de uso
 - 10 hábitos de ejemplo precargados
-- 5 misiones de ejemplo
+- 5 objetivos de ejemplo
 
 **Distribución:** notion-template marketplaces (gumroad, notion gallery), Twitter, blog post.  
-**Precio:** $0 (lead magnet).  
-**Conversión esperada:** uso vs comercialización paid (5–10%).
+**Precio:** $0 (lead magnet) o $9 (entry point).
 
 ### Tier 2 — Pro template (USD 29–49 una vez)
 **Lo de Tier 1 +:**
-- Repo de Vercel widgets (HUD, check-in, radar)
+- **Los 5 temas listos para intercambiar** (la propuesta de valor única)
+- Repo de Vercel widgets
 - Setup guide de Make automation
-- Onboarding en video (15 min)
+- Onboarding en video (15–30 min)
 - Soporte por email 30 días
+- Guía de cómo crear tema custom
 
-**Diferencial vs free:** widgets en vivo dentro de Notion (UX superior a tablas), automatización de creación diaria.
+**Diferencial vs free:** el usuario puede experimentar con temas hasta encontrar el que le hace clic. Eso es defensa contra "no me gusta Dark Souls".
 
 ### Tier 3 — Servicio gestionado (USD 9–15/mes)
 **Lo de Tier 2 +:**
@@ -351,42 +435,43 @@ Estética común: Playfair Display + DM Mono, dorado hueso `#d4c5a0`, transparen
 - Sync automático sin configurar Make
 - Dashboard web fuera de Notion para reportes
 - Backups y exports
-
-**Mercado objetivo:** usuarios serios que no quieren tocar código.
+- Acceso al "tema del mes" (1 tema nuevo cada 30 días)
 
 ### Tier 4 — Coaching 1-on-1 (USD 100–300/mes)
 **Lo de Tier 3 +:**
-- Configuración personalizada del sistema (calibración inicial)
+- Calibración inicial del sistema
 - Sesiones mensuales de revisión y ajuste de targets
-- Acceso prioritario a roadmap
-
-**Mercado objetivo:** profesionales/emprendedores con disposición a pagar por estructura.
+- Diseño de tema custom
+- Acceso prioritario a nuevas mecánicas
 
 ### Métricas de validación antes de invertir en build
 - ¿Hay 50 personas pagando $29 por Tier 2 antes de invertir en Tier 3?
-- ¿El churn de Tier 3 es <10% mensual? Si no, el sistema no genera valor recurrente.
-- ¿Los usuarios que pagan **realmente lo usan diariamente**? (telemetría anónima del widget de check-in).
+- ¿El churn de Tier 3 es <10% mensual?
+- ¿Los usuarios que pagan **realmente lo usan diariamente**? (telemetría anónima del widget de check-in)
+- ¿Cuál de los 5 temas captura más usuarios? Eso te dice si el mercado prefiere Dark Souls (gamers) o Wholesome (mindful) o Minimal (corporate).
 
 ---
 
-## 9. Diferenciador vs templates existentes
+## 11. Diferenciador vs templates existentes
 
 La mayoría de "habit tracker en Notion" son:
 
 | Templates típicos | Este sistema |
 |---|---|
-| Tracking puro sin mecánica | Mecánica de juego con consecuencias (Humanidad) |
-| XP decorativo sin fórmula real | XP via rollups + nivel/rango calculados |
-| Solo "cosas que hacer" | Construir + Prohibido (cubre evitar) |
+| Tracking puro sin mecánica | Mecánica de juego con consecuencias (Pool de Integridad) |
+| XP decorativo sin fórmula real | XP via rollups + nivel/tier calculados |
+| Solo "cosas que hacer" | Construir + Evitar (cubre dimensión "dejar de hacer") |
 | Tablas estáticas | Widgets interactivos en vivo |
 | Datos solo en Notion | API + sync bidireccional |
 | Streak romántico (todo o nada) | Veces Target honesto (progreso medible) |
+| Un solo "look" rígido | **5 temas intercambiables + guía para crear el tuyo** |
 
-**3 ideas únicas que no encontrás en otros templates:**
+**4 ideas únicas que no encontrás en otros templates:**
 
-1. **Humanidad como recurso narrativo**: castiga falla en Prohibidos, se recupera con disciplina. Le da peso emocional al sistema (te importa no caer).
-2. **Hábitos Prohibidos como tipo formal**: los demás templates te hacen escribir "Sin azúcar" como hábito normal y te confunden con la lógica al revés. Aquí está formalizado en el modelo de datos.
-3. **Honestidad numérica**: el cálculo `Veces Target` evita el "100% en 3 días" engañoso de otros sistemas. Aceptás barras pequeñas que reflejan realidad.
+1. **Pool de Integridad como recurso narrativo**: castiga falla en Hábitos Evitar, se recupera con disciplina. Le da peso emocional al sistema.
+2. **Hábitos Evitar como tipo formal**: los demás templates te hacen escribir "Sin azúcar" como hábito normal y te confunden con la lógica al revés. Aquí está formalizado en el modelo de datos.
+3. **Honestidad numérica**: el cálculo `Veces Target` evita el "100% en 3 días" engañoso de otros sistemas.
+4. **Estética intercambiable**: 5 temas pre-diseñados + guía para tu propio tema. La mecánica es universal, la narrativa la elegís vos.
 
 ---
 
@@ -394,33 +479,34 @@ La mayoría de "habit tracker en Notion" son:
 
 ### Filtro Make
 ```
-Activo = ✅ Activo  AND  Frecuencia = 📅 Diario
+Activo = ✅  AND  Frecuencia = Diario
 ```
 
-### Fórmula `XP Ganado` (Registro Diario)
+### Fórmula `Valor Ganado` (Bitácora)
 ```javascript
-if(prop("Estado") == "✅ Completado", prop("XP Base"), 0)
+if(prop("Estado") == "Cumplido", prop("Valor Base"), 0)
 ```
 
-### Fórmula `Estado Personaje` (Personaje)
+### Fórmula `Estado` (Personaje)
 ```javascript
-if(prop("Humanidad") >= 5, "🪙 Humano", if(prop("Humanidad") > 0, "🩸 Maldito", "💀 Hueco"))
+if(prop("Integridad") >= 5, "Pleno",
+  if(prop("Integridad") > 0, "Comprometido", "Drenado"))
 ```
 
-### Fórmula `Barra XP` (Personaje)
+### Fórmula `Barra` de Puntos (Personaje)
 ```javascript
-let(xp, prop("XP Total"), lvl, floor(xp / 500), cur, xp - (lvl * 500),
+let(p, prop("Puntos Total"), lvl, floor(p / 500), cur, p - (lvl * 500),
   "Nv." + format(lvl + 1) + " " +
   "▰".repeat(floor(cur / 50)) +
   "▱".repeat(10 - floor(cur / 50)) +
-  " " + format(cur) + "/500 XP")
+  " " + format(cur) + "/500")
 ```
 
 ### Cálculo de progreso (backend)
 ```javascript
 const progresoFinal = vecesTarget > 0
   ? Math.min(100, Math.round((completadosTotal / vecesTarget) * 100))
-  : Math.min(100, Math.round((xpAcumulado / xpTargetRound) * 100));
+  : Math.min(100, Math.round((puntosAcumulado / xpTargetRound) * 100));
 ```
 
 ---
@@ -430,5 +516,5 @@ const progresoFinal = vecesTarget > 0
 Este blueprint puede ser utilizado, modificado y comercializado libremente.  
 Si lo usás como base de un producto comercial, una mención en docs/about es apreciada pero no obligatoria.
 
-**Contacto**: paco / fvazquez@procomi.com  
-**Repo de referencia**: github.com/frvnciscx/widget_radar
+**Implementación de referencia**: github.com/frvnciscx/widget_radar  
+**Versión 2.0** — Mayo 2026 (refactor multi-tema)
