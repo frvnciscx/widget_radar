@@ -349,8 +349,21 @@ El estado caído debe sentirse como **algo que querés evitar** (no neutral). Ej
 
 ### Make automation (escenario diario)
 **Trigger**: 6:00 AM zona del usuario  
+**Search**: hábitos del Catálogo  
 **Filter**: `Activo = ✅` AND `Frecuencia = Diario`  
-**Action**: para cada hábito, crear entrada en Bitácora con `Estado = Pendiente`, `Fecha = hoy`
+**Iterator**: itera cada hábito  
+**Switch/Router**: mapea `habit.Stat.name` → page_id del Stat correspondiente  
+**Action — Create Data Source Item en Bitácora con TODOS estos campos**:
+- `Entrada` = nombre del hábito (texto del title)
+- `Hábito Ref` = page_id del hábito iterado
+- `Estado` = `⬜ Pendiente`
+- `Fecha` = `formatDate(now; "YYYY-MM-DD")`
+- **`Personaje`** = page_id del personaje principal
+- **`Stat Ref`** = page_id mapeado del Switch
+
+> ⚠️ **Crítico**: si faltan `Personaje` o `Stat Ref` en el create, los rollups de XP no suman (devuelven 0 silenciosamente). Es el bug más común y silencioso de este sistema.
+
+**Plan B si Make no soporta el Switch fácilmente**: implementar endpoint `/api/repair-registros` que vincule las relations a posteriori (incluido en este blueprint). Combinarlo con cron diario para auto-reparación.
 
 ### Vercel Serverless Functions
 | Endpoint | Método | Función |
@@ -360,15 +373,19 @@ El estado caído debe sentirse como **algo que querés evitar** (no neutral). Ej
 | `/api/habit-toggle` | POST | Cambia estado + auto-decremento Integridad si Evitar |
 | `/api/objetivos` | GET | Progreso real cruzando 3 DBs |
 | `/api/sync-objetivos` | GET/POST | Escribe Progreso a Notion (manual o cron) |
+| `/api/repair-registros` | GET/POST | Vincula relations faltantes (Personaje + Stat Ref). Soporta `?dry=1` |
+| `/api/cron-daily` | GET/POST | Combina repair + sync. Es el endpoint que llama el cron |
 
 **Variables de entorno**: `NOTION_TOKEN` de la integration interna.
 
 ### Cron Job (vercel.json)
 ```json
 "crons": [
-  { "path": "/api/sync-objetivos", "schedule": "0 5 * * *" }
+  { "path": "/api/cron-daily", "schedule": "0 5 * * *" }
 ]
 ```
+
+Vercel Hobby permite hasta 2 cron jobs; este endpoint combina **repair + sync** en 1 cron, dejando margen para agregar otro en el futuro (ej. notificaciones, backups).
 
 ### Widgets HTML embebibles
 - **Dashboard de atributos** — radar chart + barras
@@ -389,6 +406,7 @@ Estética común: usar la paleta y fuentes del tema elegido.
 - **Filtros `today` relativos no existen en API.** Calcular fecha en backend con TZ explícita (`Intl.DateTimeFormat.formatToParts`).
 - **Embeds externos no se crean vía API**. Solo embeds internos a páginas Notion. Iframes externos requieren `/embed` manual.
 - **Rollups que apuntan a DBs en papelera devuelven `null`** mientras la UI muestra cache.
+- **Make crea pages SIN setear todas las relations** por defecto. Hay que configurarlas explícitamente en el módulo Create. **Sintoma**: rollups en 0 mientras hay datos. **Diagnóstico**: fetchear una page recién creada y mirar si tiene todas las relations llenas.
 
 ### Diseño
 - **Cada atributo necesita ≥1 hábito que lo alimente**. Sino es decoración.
@@ -402,6 +420,7 @@ Estética común: usar la paleta y fuentes del tema elegido.
 - **Múltiples capas sin probar** → deuda visual y mental
 - **100% engañoso** (sin Veces Target) → el sistema te miente y dejás de creerle
 - **Cambiar de tema cada semana** → diluye el sentido de progresión narrativa
+- **Confiar en que la automatización setea todo bien** sin verificar el primer día. Hacé un fetch de una page recién creada. Si faltan relations, los rollups callan en 0 y parecerá "el sistema no funciona" cuando es solo data incompleta.
 
 ---
 

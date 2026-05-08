@@ -91,7 +91,15 @@ vercel deploy
 En el dashboard de Vercel, agregá la env var: `NOTION_TOKEN = ntn_...`
 
 **4. Configurar Make**  
-Importá el escenario diario (descripción en blueprint sección 8). Trigger 6 AM, filter `Activo = ✅` AND `Frecuencia = 📅 Diario`, action crear entrada en Bitácora.
+Importá el escenario diario (descripción en blueprint sección 8).
+- Trigger: **6 AM** zona del usuario
+- Filter: `Activo = ✅` AND `Frecuencia = 📅 Diario`
+- Action: crear entrada en Bitácora con campos:
+  - `Entrada`, `Hábito Ref`, `Estado = ⬜ Pendiente`, `Fecha = today`
+  - **`Personaje`** = page_id del personaje principal
+  - **`Stat Ref`** = page_id del Stat correspondiente (mapeado vía Switch desde `habit.Stat.name`)
+
+> ⚠️ **Si Make no setea `Personaje` y `Stat Ref`**, los rollups de XP no suman. El cron diario (`/api/cron-daily`) repara automáticamente cada noche, pero el HUD muestra XP atrasado durante el día. Configurar Make correctamente es la solución de raíz.
 
 ### Personalizar IDs de DBs
 Las IDs en `api/*.js` son del workspace de referencia. Reemplazalas por las tuyas:
@@ -115,9 +123,19 @@ const CATALOGO_DB  = 'TU_ID_AQUI';
 | `/api/stats` | GET | Personaje + atributos + integridad | `{ fisico, mente, ..., xpTotal, nivel, rango, humanidad, estadoPersonaje }` |
 | `/api/registro` | GET | Hábitos del día (TZ del usuario) | `{ today, count, items[] }` |
 | `/api/habit-toggle` | POST | Cambiar estado de un hábito | `{ ok, estado, humanidad: { delta, before, after } }` |
-| `/api/misiones` | GET | Objetivos con progreso calculado | `{ count, misiones[] }` con `xpAcumulado`, `progresoFinal`, etc. |
-| `/api/sync-misiones` | GET | Escribe progreso a Notion | `{ updated, failed, skipped, updates[] }` |
+| `/api/misiones` | GET | Objetivos con progreso calculado | `{ count, misiones[] }` |
+| `/api/sync-misiones` | GET | Escribe progreso de objetivos a Notion | `{ updated, failed, skipped, updates[] }` |
+| `/api/repair-registros` | GET | Vincula relations faltantes (Personaje + Stat Ref). Soporta `?dry=1` para dry-run | `{ updated, skipped, errors, updates[] }` |
+| `/api/cron-daily` | GET | **Endpoint del cron**: ejecuta repair → sync en orden | `{ repair, sync, duration_ms }` |
 | `/api/debug` | GET | Raw JSON del personaje | Dump completo de propiedades |
+
+### 🔄 Cron Job automático
+
+`vercel.json` tiene configurado un cron diario a las **5:00 UTC** (~23:00 México) que ejecuta `/api/cron-daily`:
+1. **repair-registros** vincula automáticamente Personaje + Stat Ref a los registros nuevos creados por Make (que no setea esas relations por defecto)
+2. **sync-misiones** recalcula y escribe el Progreso de cada misión en Notion
+
+Vercel Hobby permite hasta 2 cron jobs; este endpoint combina ambas tareas en 1.
 
 ---
 
@@ -169,6 +187,7 @@ Algunas trampas de la API de Notion que te pueden ahorrar horas:
 4. **Filtros `today` relativos no existen en API** — calcular fecha en backend con TZ explícita
 5. **Embeds externos no se crean vía API** — solo embeds internos a páginas Notion
 6. **Rollups a DBs en papelera devuelven `null`** — la UI muestra cache, la API no
+7. **Make tiene que setear TODAS las relations** al crear pages, no solo el title — los rollups que falten devuelven 0 silenciosamente. Si "el sistema no suma XP", probablemente faltan relations en cada entrada nueva
 
 Lista completa en [BLUEPRINT sección 9](./BLUEPRINT_GAMIFICATION_NOTION.md#9-reglas-operativas-lecciones-aprendidas).
 

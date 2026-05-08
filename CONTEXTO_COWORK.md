@@ -19,16 +19,18 @@ Los widgets viven en un repositorio de GitHub y se despliegan en Vercel.
 ```
 radar-widget/
 ├── api/
-│   ├── stats.js          ← Lee Personaje + Stats (con Humanidad y bypass de rollups)
-│   ├── registro.js       ← GET hábitos del día (resuelve nombres del Catálogo, filtra pausados)
-│   ├── habit-toggle.js   ← POST cambiar estado (auto -1 Humanidad si Prohibido cae)
-│   ├── misiones.js       ← GET misiones con progreso calculado (Veces Target o fallback)
-│   ├── sync-misiones.js  ← POST escribe Progreso de cada misión a Notion (manual + cron diario)
-│   └── debug.js          ← Dump raw JSON del Personaje
-├── index.html            ← Radar de stats (widget activo)
-├── personaje.html        ← HUD nivel/XP/rango/Humanidad (widget activo)
-├── registro.html         ← Check-in diario interactivo (widget activo)
-├── vercel.json           ← Rutas + cron diario
+│   ├── stats.js               ← Lee Personaje + Stats (con Humanidad y bypass de rollups)
+│   ├── registro.js            ← GET hábitos del día (resuelve nombres del Catálogo, filtra pausados)
+│   ├── habit-toggle.js        ← POST cambiar estado (auto -1 Humanidad si Prohibido cae)
+│   ├── misiones.js            ← GET misiones con progreso calculado (exporta computeMisiones)
+│   ├── sync-misiones.js       ← POST escribe Progreso a Notion (exporta runSyncMisiones)
+│   ├── repair-registros.js    ← POST vincula Personaje + Stat Ref a registros sin relations (exporta runRepairRegistros)
+│   ├── cron-daily.js          ← Endpoint del cron: ejecuta repair → sync en orden
+│   └── debug.js               ← Dump raw JSON del Personaje
+├── index.html                 ← Radar de stats (widget activo)
+├── personaje.html             ← HUD nivel/XP/rango/Humanidad (widget activo)
+├── registro.html              ← Check-in diario interactivo (widget activo)
+├── vercel.json                ← Rutas + cron diario (apunta a cron-daily)
 └── package.json
 ```
 
@@ -52,11 +54,17 @@ radar-widget/
 | `/api/registro` | GET | Hábitos de hoy (filtra pausados, resuelve nombres) |
 | `/api/habit-toggle` | POST | Cambia estado + auto-decremento Humanidad si cae en Prohibido |
 | `/api/misiones` | GET | Misiones con progreso real (cruza 3 DBs) |
-| `/api/sync-misiones` | GET/POST | Escribe Progreso a Notion (también ejecuta cron diario) |
+| `/api/sync-misiones` | GET/POST | Escribe Progreso de cada misión a Notion |
+| `/api/repair-registros` | GET/POST | Vincula Personaje + Stat Ref en registros nuevos. Soporta `?dry=1` para dry-run |
+| `/api/cron-daily` | GET/POST | Ejecuta repair → sync. Es el endpoint que llama el cron diario |
 | `/api/debug` | GET | Dump raw del Personaje |
 
 ## Cron Jobs (vercel.json)
-- `/api/sync-misiones` — diario a las 5:00 UTC (~23:00–00:00 México). Sincroniza Progreso de cada misión a Notion automáticamente.
+- `/api/cron-daily` — diario a las 5:00 UTC (~23:00–00:00 México). Ejecuta:
+  1. **repair-registros** (vincula Personaje + Stat Ref a entradas nuevas creadas por Make)
+  2. **sync-misiones** (recalcula y escribe Progreso de cada misión)
+
+Vercel Hobby permite hasta 2 crons; este endpoint combina ambas tareas en 1 cron job.
 
 ## Estética definida
 - **Transparente** — fondo `transparent` para mimetizarse con Notion
@@ -113,10 +121,24 @@ Page ID del personaje principal (Paco): `357e89bc-3fee-81f7-a707-ccdde4a842ce`
 - `Progreso = completadosTotal / Veces Target × 100` (capeado a 100)
 - Sin Veces Target: fallback a `xpAcumulado / xpTargetRound` (impreciso para streaks)
 
-## Filtro Make (escenario diario)
+## Make scenario diario (con valores correctos)
 Hoy a las 6 AM, Make hace Search en Catálogo con filtro:
 - `Activo = ✅ Activo` AND `Frecuencia = 📅 Diario`
-Resultado: solo crea entradas en Registro Diario para hábitos diarios activos.
+
+Al crear cada entrada en Registro Diario, **Make debe setear**:
+- **Entrada**: nombre del hábito (texto del title)
+- **Hábito Ref**: page_id del hábito iterado
+- **Estado**: `⬜ Pendiente`
+- **Fecha**: `formatDate(now; "YYYY-MM-DD")`
+- **Personaje**: `357e89bc-3fee-81f7-a707-ccdde4a842ce` (page_id de Paco)
+- **Stat Ref**: page_id del Stat correspondiente, mapeado desde `habit.Stat.name`:
+  - `💪 Físico` → `357e89bc-3fee-8114-98fa-df6b07baeb2e`
+  - `🧠 Mente` → `357e89bc-3fee-8167-85bc-e21315cf27a9`
+  - `🥗 Nutrición` → `357e89bc-3fee-81fd-9d2f-fe5421fd10cc`
+  - `📋 Hábitos` → `357e89bc-3fee-811c-b4b4-d0c105e47c9a`
+  - `💼 Negocio` → `357e89bc-3fee-8113-8773-f5b32ab13732`
+
+Si Make NO setea Personaje/Stat Ref (deuda histórica), el cron diario `/api/cron-daily` los repara cada noche. Pero los rollups no suman en tiempo real durante el día → mejor arreglar Make.
 
 ## Cómo agregar un nuevo widget
 1. Crear `nombre.html` en la raíz del proyecto
@@ -166,6 +188,8 @@ Fix aplicado:
 - **Endpoints POST que mutan datos requieren auth si la URL puede filtrarse.**
 - **Cuando un endpoint devuelve `[]`, distinguir entre lista vacía y error.**
 - **Resolver nombres desde el Catálogo (live)**, no desde el title histórico del Registro. Permite renombrar hábitos sin romper la UI.
+- **Verificar que Make setee TODAS las relations necesarias** al crear páginas. Si falta una relation, los rollups que la usan devuelven 0 — y eso parece "el sistema no funciona" cuando en realidad falta data en cada page nueva.
+- **Endpoints idempotentes con dry-run mode** son críticos para herramientas de reparación. `?dry=1` reporta sin tocar; ejecutar real solo cuando se confirma.
 
 ### Proceso (trabajar con el asistente)
 - **Cuando un asistente AI hace cambios estructurales en herramientas críticas, hacer checkpoint antes y diff después.**
