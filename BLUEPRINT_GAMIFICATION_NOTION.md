@@ -545,8 +545,26 @@ const progresoFinal = vecesTarget > 0
 
 ## Licencia y atribución
 
-Este blueprint puede ser utilizado, modificado y comercializado libremente.  
-Si lo usás como base de un producto comercial, una mención en docs/about es apreciada pero no obligatoria.
+Este blueprint está bajo **CC BY-NC 4.0** (Creative Commons Attribution-NonCommercial).
+
+✅ **Permitido sin permiso explícito**:
+- Implementarlo en tu Notion personal
+- Modificarlo para tu uso individual
+- Compartir el blueprint con atribución
+- Usar el código de referencia (MIT) para tus integraciones
+
+❌ **Requiere licencia comercial**:
+- Vender templates basados en este blueprint
+- Construir SaaS / app pagada usando esta documentación
+- Incluirlo en cursos pagados o coaching comercial
+- Cualquier uso comercial directo o indirecto
+
+**Para licencia comercial**: contactar a **fvazquez@procomi.com**.  
+Términos razonables disponibles para emprendedores y creators.
+
+**Atribución sugerida**:
+> Based on Quest Log Gamification System by Francisco Vázquez  
+> github.com/frvnciscx/quest-log-notion
 
 **Implementación de referencia**: github.com/frvnciscx/quest-log-notion  
 **Versión 2.0** — Mayo 2026 (refactor multi-tema)

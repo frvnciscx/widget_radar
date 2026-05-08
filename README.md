@@ -171,13 +171,26 @@ A diferencia de habit trackers comunes:
 
 ## 🤝 Contribuir / forkear
 
-Este sistema está diseñado para ser **forkeable y comercializable**. La licencia permite:
+Este repositorio usa **dual license**:
 
-- Usarlo personalmente sin restricción
-- Modificarlo y distribuirlo
-- **Comercializarlo** (template paid, servicio, coaching) con o sin atribución
+- **Código** (`api/*.js`, `*.html`, `vercel.json`) — **MIT License**: uso libre, modificación, distribución y comercialización con atribución. Ver [`LICENSE`](./LICENSE).
+- **Documentación** (`README.md`, `BLUEPRINT_GAMIFICATION_NOTION.md`, `BACKLOG.md`, `CONTEXTO_COWORK.md`) — **CC BY-NC 4.0**: uso personal libre con atribución, **NO comercializable** sin licencia explícita. Ver [`LICENSE-DOCS.md`](./LICENSE-DOCS.md).
 
-Si lo usás como base de un producto comercial, una mención en docs/about es apreciada pero no obligatoria.
+### En lenguaje claro
+
+✅ **Podés:**
+- Forkear el código y modificarlo para tus widgets/integraciones
+- Implementar el sistema en tu Notion personal
+- Compartir y discutir el blueprint con atribución
+
+❌ **NO podés sin licencia comercial:**
+- Vender un template Notion basado en este blueprint
+- Construir un SaaS comercial usando esta documentación como base
+- Incluirlo en cursos pagos, coaching o productos comerciales
+
+### Licencia comercial
+
+¿Querés comercializar usando el blueprint? Contactá: **fvazquez@procomi.com**
 
 ---
 
@@ -199,7 +212,11 @@ Lista completa en [BLUEPRINT sección 9](./BLUEPRINT_GAMIFICATION_NOTION.md#9-re
 
 ## 📜 Licencia
 
-Sin restricciones. Uso libre incluyendo comercialización.
+**Dual license**:
+- Código → [MIT](./LICENSE)
+- Documentación → [CC BY-NC 4.0](./LICENSE-DOCS.md)
+
+Para comercialización del blueprint completo, contactar a fvazquez@procomi.com.
 
 ---
 
