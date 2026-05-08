@@ -1,4 +1,4 @@
-import { queryDb, NOTION_HEADERS, MISIONES_DB, CATALOGO_DB, REGISTRO_DB } from './misiones.js';
+import { queryDb, NOTION_HEADERS, CATALOGO_DB, REGISTRO_DB } from './misiones.js';
 
 /**
  * Repara registros de Bitácora que no tienen Personaje ni Stat Ref vinculados.
@@ -26,116 +26,119 @@ async function patchPage(token, pageId, properties) {
   return { ok: r.ok, status: r.status, text: r.ok ? null : (await r.text()).slice(0, 300) };
 }
 
+/**
+ * Lógica reutilizable. Reutilizada desde cron-daily.
+ * @param {string} token - NOTION_TOKEN
+ * @param {boolean} dryRun - si true, no hace PATCH (solo reporta)
+ */
+export async function runRepairRegistros(token, dryRun = false) {
+  const [catalogo, stats, registros] = await Promise.all([
+    queryDb(token, CATALOGO_DB),
+    queryDb(token, STATS_DB),
+    queryDb(token, REGISTRO_DB),
+  ]);
+
+  // Mapa habitoId → stat string (ej. '💪 Físico')
+  const habitoToStat = {};
+  for (const h of catalogo) {
+    habitoToStat[h.id] = h.properties?.['Stat']?.select?.name || null;
+  }
+
+  // Mapa stat string → page_id
+  const statToPageId = {};
+  for (const s of stats) {
+    const name = s.properties?.['Stat']?.title?.[0]?.plain_text || null;
+    if (name) statToPageId[name] = s.id;
+  }
+
+  const updates = [];
+  const skipped = [];
+  const errors  = [];
+
+  for (const reg of registros) {
+    const props = reg.properties || {};
+    const habitoRefId  = props['Hábito Ref']?.relation?.[0]?.id || null;
+    const personajeIds = (props['Personaje']?.relation || []).map(r => r.id);
+    const statRefIds   = (props['Stat Ref']?.relation || []).map(r => r.id);
+    const entrada      = props['Entrada']?.title?.[0]?.plain_text || '(sin nombre)';
+
+    const needsPersonaje = !personajeIds.includes(PERSONAJE_PAGE_ID);
+
+    let targetStatPageId = null;
+    let needsStatRef = false;
+    if (habitoRefId) {
+      const statName = habitoToStat[habitoRefId];
+      if (statName && statToPageId[statName]) {
+        targetStatPageId = statToPageId[statName];
+        needsStatRef = !statRefIds.includes(targetStatPageId);
+      }
+    }
+
+    if (!needsPersonaje && !needsStatRef) {
+      skipped.push({ id: reg.id, entrada, reason: 'ya tiene relations correctas' });
+      continue;
+    }
+
+    const patch = {};
+    if (needsPersonaje) {
+      const newRelations = [...new Set([...personajeIds, PERSONAJE_PAGE_ID])].map(id => ({ id }));
+      patch['Personaje'] = { relation: newRelations };
+    }
+    if (needsStatRef && targetStatPageId) {
+      const newStatRefs = [...new Set([...statRefIds, targetStatPageId])].map(id => ({ id }));
+      patch['Stat Ref'] = { relation: newStatRefs };
+    }
+
+    const update = {
+      id: reg.id,
+      entrada,
+      habitoRefId,
+      added: {
+        personaje: needsPersonaje,
+        statRef: needsStatRef ? targetStatPageId : null,
+      },
+    };
+
+    if (dryRun) {
+      update.dryRun = true;
+      updates.push(update);
+      continue;
+    }
+
+    const result = await patchPage(token, reg.id, patch);
+    if (result.ok) {
+      updates.push(update);
+    } else {
+      errors.push({ ...update, error: result.text, status: result.status });
+    }
+  }
+
+  return {
+    dryRun,
+    total: registros.length,
+    updated: updates.length,
+    skipped: skipped.length,
+    errors: errors.length,
+    updates,
+    errorsDetails: errors,
+    _debug: {
+      catalogoCount: catalogo.length,
+      statsCount: stats.length,
+      registrosCount: registros.length,
+      statToPageId,
+    },
+  };
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST');
 
-  const NOTION_TOKEN = process.env.NOTION_TOKEN;
   const dryRun = req.query?.dry === '1' || req.query?.dryRun === 'true';
 
   try {
-    // 1. Cargar las 3 DBs en paralelo
-    const [catalogo, stats, registros] = await Promise.all([
-      queryDb(NOTION_TOKEN, CATALOGO_DB),
-      queryDb(NOTION_TOKEN, STATS_DB),
-      queryDb(NOTION_TOKEN, REGISTRO_DB),
-    ]);
-
-    // 2. Mapa habitoId → stat string (ej. '💪 Físico')
-    const habitoToStat = {};
-    for (const h of catalogo) {
-      habitoToStat[h.id] = h.properties?.['Stat']?.select?.name || null;
-    }
-
-    // 3. Mapa stat string → page_id
-    const statToPageId = {};
-    for (const s of stats) {
-      const name = s.properties?.['Stat']?.title?.[0]?.plain_text || null;
-      if (name) statToPageId[name] = s.id;
-    }
-
-    // 4. Procesar registros
-    const updates = [];
-    const skipped = [];
-    const errors  = [];
-
-    for (const reg of registros) {
-      const props = reg.properties || {};
-      const habitoRefId  = props['Hábito Ref']?.relation?.[0]?.id || null;
-      const personajeIds = (props['Personaje']?.relation || []).map(r => r.id);
-      const statRefIds   = (props['Stat Ref']?.relation || []).map(r => r.id);
-      const entrada      = props['Entrada']?.title?.[0]?.plain_text || '(sin nombre)';
-
-      // ¿Necesita Personaje?
-      const needsPersonaje = !personajeIds.includes(PERSONAJE_PAGE_ID);
-
-      // ¿Necesita Stat Ref?
-      let targetStatPageId = null;
-      let needsStatRef = false;
-      if (habitoRefId) {
-        const statName = habitoToStat[habitoRefId];
-        if (statName && statToPageId[statName]) {
-          targetStatPageId = statToPageId[statName];
-          needsStatRef = !statRefIds.includes(targetStatPageId);
-        }
-      }
-
-      if (!needsPersonaje && !needsStatRef) {
-        skipped.push({ id: reg.id, entrada, reason: 'ya tiene relations correctas' });
-        continue;
-      }
-
-      // Construir patch
-      const patch = {};
-      if (needsPersonaje) {
-        // Mantener relations existentes + agregar Paco
-        const newRelations = [...new Set([...personajeIds, PERSONAJE_PAGE_ID])].map(id => ({ id }));
-        patch['Personaje'] = { relation: newRelations };
-      }
-      if (needsStatRef && targetStatPageId) {
-        const newStatRefs = [...new Set([...statRefIds, targetStatPageId])].map(id => ({ id }));
-        patch['Stat Ref'] = { relation: newStatRefs };
-      }
-
-      const update = {
-        id: reg.id,
-        entrada,
-        habitoRefId,
-        added: {
-          personaje: needsPersonaje,
-          statRef: needsStatRef ? statToPageId[habitoToStat[habitoRefId]] : null,
-        },
-      };
-
-      if (dryRun) {
-        update.dryRun = true;
-        updates.push(update);
-        continue;
-      }
-
-      const result = await patchPage(NOTION_TOKEN, reg.id, patch);
-      if (result.ok) {
-        updates.push(update);
-      } else {
-        errors.push({ ...update, error: result.text, status: result.status });
-      }
-    }
-
-    res.status(200).json({
-      dryRun,
-      total: registros.length,
-      updated: updates.length,
-      skipped: skipped.length,
-      errors: errors.length,
-      updates,
-      errorsDetails: errors,
-      _debug: {
-        catalogoCount: catalogo.length,
-        statsCount: stats.length,
-        registrosCount: registros.length,
-        statToPageId,
-      },
-    });
+    const result = await runRepairRegistros(process.env.NOTION_TOKEN, dryRun);
+    res.status(200).json(result);
   } catch (e) {
     res.status(500).json({ error: e.message, stack: e.stack });
   }

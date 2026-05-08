@@ -8,12 +8,13 @@
     { "source": "/api/misiones",      "destination": "/api/misiones.js" },
     { "source": "/api/sync-misiones", "destination": "/api/sync-misiones.js" },
     { "source": "/api/repair-registros", "destination": "/api/repair-registros.js" },
+    { "source": "/api/cron-daily", "destination": "/api/cron-daily.js" },
     { "source": "/personaje",         "destination": "/personaje.html" },
     { "source": "/registro",          "destination": "/registro.html" }
   ],
   "crons": [
     {
-      "path": "/api/sync-misiones",
+      "path": "/api/cron-daily",
       "schedule": "0 5 * * *"
     }
   ]
