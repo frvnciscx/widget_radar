@@ -41,7 +41,7 @@ export default async function handler(req, res) {
   if (typeof body === 'string') {
     try { body = JSON.parse(body); } catch(e) { body = null; }
   }
-  const { id, estado } = body || {};
+  const { id, estado, useHoguera } = body || {};
 
   if (!id || typeof id !== 'string') {
     return res.status(400).json({ error: 'Falta o inválido el campo "id".' });
@@ -98,22 +98,40 @@ export default async function handler(req, res) {
       }
     }
 
-    // 4. Si hay delta, actualizar Humanidad del personaje
+    // 4. Si hay delta, actualizar Humanidad — pero antes chequear si hay hoguera disponible
     let humanidadInfo = { delta: 0, before: null, after: null, reason: humanidadReason };
+    let hogueraInfo   = { used: false, before: null, after: null };
 
     if (humanidadDelta !== 0) {
       const personajePage = await fetchPage(NOTION_TOKEN, PERSONAJE_PAGE_ID);
-      const before = personajePage?.properties?.['Humanidad']?.number ?? 0;
-      const after  = Math.max(HUMANIDAD_MIN, Math.min(HUMANIDAD_MAX, before + humanidadDelta));
+      const humBefore = personajePage?.properties?.['Humanidad']?.number ?? 0;
+      const hogBefore = personajePage?.properties?.['Hogueras']?.number ?? 0;
 
-      // Solo PATCH si cambió (puede que ya esté en cap)
-      if (after !== before) {
+      // Caso 1: el usuario quiere usar hoguera al caer (-1 humanidad → -1 hoguera)
+      if (useHoguera === true && humanidadDelta === -1 && hogBefore > 0) {
+        const hogAfter = hogBefore - 1;
         await patchPage(NOTION_TOKEN, PERSONAJE_PAGE_ID, {
-          Humanidad: { number: after },
+          Hogueras: { number: hogAfter },
         });
+        hogueraInfo = { used: true, before: hogBefore, after: hogAfter };
+        humanidadInfo = {
+          delta: 0, before: humBefore, after: humBefore,
+          reason: 'caída absorbida por hoguera (humanidad intacta)',
+        };
+      } else {
+        // Caso 2: aplicar el delta a humanidad normalmente (con cap)
+        const humAfter = Math.max(HUMANIDAD_MIN, Math.min(HUMANIDAD_MAX, humBefore + humanidadDelta));
+        if (humAfter !== humBefore) {
+          await patchPage(NOTION_TOKEN, PERSONAJE_PAGE_ID, {
+            Humanidad: { number: humAfter },
+          });
+        }
+        humanidadInfo = { delta: humanidadDelta, before: humBefore, after: humAfter, reason: humanidadReason };
+        // Si pidió hoguera pero no había, registrarlo
+        if (useHoguera === true && hogBefore === 0) {
+          hogueraInfo = { used: false, before: 0, after: 0, reason: 'sin hogueras disponibles, costó humanidad' };
+        }
       }
-
-      humanidadInfo = { delta: humanidadDelta, before, after, reason: humanidadReason };
     }
 
     res.status(200).json({
@@ -123,6 +141,7 @@ export default async function handler(req, res) {
       oldEstado,
       isProhibido,
       humanidad: humanidadInfo,
+      hoguera: hogueraInfo,
     });
   } catch (e) {
     res.status(500).json({ error: e.message, stack: e.stack });

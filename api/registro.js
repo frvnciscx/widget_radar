@@ -58,13 +58,14 @@ export default async function handler(req, res) {
     const regData = await regRes.json();
     const catData = catRes.ok ? await catRes.json() : { results: [] };
 
-    // Mapa de hábitos: page_id → { nombre actual, activo }
+    // Mapa de hábitos: page_id → { nombre actual, activo, tipo }
     const habitosMap = {};
     for (const h of (catData.results || [])) {
       habitosMap[h.id] = {
         nombre: h.properties?.['Hábito']?.title?.[0]?.plain_text || null,
         activo: h.properties?.['Activo']?.select?.name || '✅ Activo',
         xpValor: h.properties?.['XP Valor']?.number ?? 0,
+        tipo:   h.properties?.['Tipo']?.select?.name || '🟢 Construir',
       };
     }
 
@@ -82,11 +83,12 @@ export default async function handler(req, res) {
         habitoId: habitoRefId,
         entrada,
         estado:   p.properties?.['Estado']?.select?.name || '⬜ Pendiente',
-        // XP Base es rollup; si no se resuelve usamos XP Valor del Catálogo como fallback
         xpBase:   p.properties?.['XP Base']?.rollup?.number ?? xpFromCat ?? 0,
         xpGanado: p.properties?.['XP Ganado']?.formula?.number ?? 0,
         fecha:    p.properties?.['Fecha']?.date?.start || null,
         habitoActivo: habitoCat?.activo || '✅ Activo',
+        tipo:         habitoCat?.tipo   || '🟢 Construir',
+        esProhibido:  habitoCat?.tipo   === '🔴 Prohibido',
       };
     });
 

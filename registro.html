@@ -204,6 +204,30 @@ body {
   transition: opacity 0.2s;
 }
 .error-toast.visible { opacity: 1; }
+
+.hogueras-bar {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  text-align: right;
+  padding: 0 4px 8px 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  align-items: center;
+}
+.hogueras-bar .label { font-weight: 300; }
+.hogueras-bar .flames { letter-spacing: 0; }
+.hogueras-bar .flame.off { opacity: 0.2; filter: grayscale(1); }
+.hogueras-bar .flame.on  { opacity: 1; }
+
+.estado-btn[data-e="hoguera"] {
+  font-size: 12px;
+}
+.estado-btn[data-e="hoguera"].active { background: rgba(212,165,116,0.25); }
+.estado-btn[data-e="hoguera"]:disabled { opacity: 0.15; cursor: not-allowed; }
 </style>
 </head>
 <body data-theme="dark">
@@ -224,6 +248,7 @@ body {
     <span class="sect-label">Check-in del día</span>
     <span class="summary" id="summary">—</span>
   </div>
+  <div class="hogueras-bar" id="hogueras-bar"></div>
 
   <div id="content" class="loading">Cargando...</div>
   <div id="error" class="error-toast"></div>
@@ -252,6 +277,7 @@ const VALUE_TO_KEY = {
 };
 
 let ITEMS = [];
+let HOGUERAS = { value: 0, max: 4 };
 
 function rowClass(estado) {
   if (estado === '✅ Completado') return 'row completed';
@@ -280,12 +306,17 @@ function renderList() {
   let html = '<div class="list">';
   ITEMS.forEach(item => {
     const key = VALUE_TO_KEY[item.estado] || 'pendiente';
+    // Botón hoguera solo para Prohibidos. Disabled si no hay hogueras disponibles.
+    const hogueraBtn = item.esProhibido
+      ? `<button class="estado-btn" data-e="hoguera" title="Caer pero usar hoguera (no resta humanidad)" ${HOGUERAS.value <= 0 ? 'disabled' : ''}>🔥</button>`
+      : '';
     html += `
-      <div class="${rowClass(item.estado)}" data-id="${item.id}">
+      <div class="${rowClass(item.estado)}" data-id="${item.id}" data-prohibido="${item.esProhibido ? '1' : '0'}">
         <div class="estado-group">
           <button class="estado-btn ${key === 'pendiente'  ? 'active' : ''}" data-e="pendiente"  title="Pendiente">${ESTADOS.pendiente.label}</button>
           <button class="estado-btn ${key === 'completado' ? 'active' : ''}" data-e="completado" title="Completado">${ESTADOS.completado.label}</button>
-          <button class="estado-btn ${key === 'omitido'    ? 'active' : ''}" data-e="omitido"    title="Omitido">${ESTADOS.omitido.label}</button>
+          <button class="estado-btn ${key === 'omitido'    ? 'active' : ''}" data-e="omitido"    title="Omitido (cuesta humanidad si es Prohibido)">${ESTADOS.omitido.label}</button>
+          ${hogueraBtn}
         </div>
         <div class="name">${escapeHtml(item.entrada)}</div>
         <div class="xp">+${item.xpBase || 0}</div>
@@ -297,14 +328,29 @@ function renderList() {
   attachListeners();
 }
 
+function renderHogueras() {
+  const el = document.getElementById('hogueras-bar');
+  if (!el) return;
+  let flames = '';
+  for (let i = 0; i < HOGUERAS.max; i++) {
+    flames += `<span class="flame ${i < HOGUERAS.value ? 'on' : 'off'}">🔥</span>`;
+  }
+  el.innerHTML = `<span class="label">Hogueras</span><span class="flames">${flames}</span><span class="label">${HOGUERAS.value}/${HOGUERAS.max}</span>`;
+}
+
 function attachListeners() {
   document.querySelectorAll('.row').forEach(row => {
     row.querySelectorAll('.estado-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
+        if (btn.disabled) return;
         const id     = row.dataset.id;
         const target = btn.dataset.e;
-        const newVal = ESTADOS[target].value;
-        await toggle(id, newVal, row);
+        // Botón 🔥: marcar Omitido + usar hoguera
+        if (target === 'hoguera') {
+          await toggle(id, ESTADOS.omitido.value, row, true);
+        } else {
+          await toggle(id, ESTADOS[target].value, row, false);
+        }
       });
     });
   });
@@ -317,35 +363,55 @@ function showError(msg) {
   setTimeout(() => el.classList.remove('visible'), 3000);
 }
 
-async function toggle(id, newEstado, rowEl) {
-  // Optimistic update
+async function toggle(id, newEstado, rowEl, useHoguera = false) {
   const item = ITEMS.find(i => i.id === id);
   if (!item) return;
   const prev = item.estado;
-  if (prev === newEstado) return; // sin cambios
+  if (prev === newEstado && !useHoguera) return; // sin cambios
+
+  // Optimistic update visual
   item.estado = newEstado;
   renderSummary();
-  // Update row classes/buttons sin re-render completo
   rowEl.className = rowClass(newEstado);
   rowEl.querySelectorAll('.estado-btn').forEach(b => {
+    if (b.dataset.e === 'hoguera') return;
     b.classList.toggle('active', b.dataset.e === VALUE_TO_KEY[newEstado]);
   });
+
+  // Si va a usar hoguera, descontar visualmente del contador local
+  let hogueraDescontada = false;
+  if (useHoguera && HOGUERAS.value > 0) {
+    HOGUERAS.value -= 1;
+    renderHogueras();
+    hogueraDescontada = true;
+  }
 
   try {
     const r = await fetch('/api/habit-toggle', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, estado: newEstado }),
+      body: JSON.stringify({ id, estado: newEstado, useHoguera }),
     });
     if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    // Sincronizar contador con respuesta del backend (fuente de verdad)
+    if (data.hoguera && typeof data.hoguera.after === 'number') {
+      HOGUERAS.value = data.hoguera.after;
+      renderHogueras();
+    }
   } catch(e) {
     // Revertir
     item.estado = prev;
     renderSummary();
     rowEl.className = rowClass(prev);
     rowEl.querySelectorAll('.estado-btn').forEach(b => {
+      if (b.dataset.e === 'hoguera') return;
       b.classList.toggle('active', b.dataset.e === VALUE_TO_KEY[prev]);
     });
+    if (hogueraDescontada) {
+      HOGUERAS.value += 1;
+      renderHogueras();
+    }
     showError('Error al guardar');
   }
 }
@@ -358,11 +424,23 @@ function escapeHtml(s) {
 
 async function loadData() {
   try {
-    const r = await fetch('/api/registro');
-    const d = await r.json();
-    if (!r.ok || d.error) {
+    // Cargar registro + stats en paralelo (stats trae hogueras)
+    const [regRes, statsRes] = await Promise.all([
+      fetch('/api/registro'),
+      fetch('/api/stats'),
+    ]);
+    const d = await regRes.json();
+    const stats = statsRes.ok ? await statsRes.json() : null;
+
+    if (stats) {
+      HOGUERAS.value = stats.hogueras ?? 0;
+      HOGUERAS.max   = stats.hogueras_max ?? 4;
+      renderHogueras();
+    }
+
+    if (!regRes.ok || d.error) {
       const root = document.getElementById('content');
-      root.outerHTML = `<div id="content" class="empty">Error: ${escapeHtml(d.error || 'HTTP ' + r.status)}</div>`;
+      root.outerHTML = `<div id="content" class="empty">Error: ${escapeHtml(d.error || 'HTTP ' + regRes.status)}</div>`;
       return;
     }
     ITEMS = d.items || [];

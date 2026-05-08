@@ -129,8 +129,10 @@ export default async function handler(req, res) {
       if (name.includes('Negocio'))   statMap.negocio   = xp;
     }
 
-    // --- HUMANIDAD ---
+    // --- HUMANIDAD + HOGUERAS ---
     const humanidad     = readNumeric('Humanidad') ?? 0;
+    const hogueras      = readNumeric('Hogueras') ?? 0;
+    const hogueras_max  = 4;
     const estadoPersonaje = props['Estado Personaje']?.formula?.string
       || (humanidad >= 5 ? '🪙 Humano' : humanidad > 0 ? '🩸 Maldito' : '💀 Hueco');
 
@@ -146,6 +148,8 @@ export default async function handler(req, res) {
       barraXP,
       humanidad,
       estadoPersonaje,
+      hogueras,
+      hogueras_max,
       _debug: {
         xpSource: 'manual sum (rollup XP Hábitos Auto bypassed)',
         xpComponents: {

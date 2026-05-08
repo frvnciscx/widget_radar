@@ -263,6 +263,14 @@ body {
 }
 .pip.on { background: var(--humanity-on); }
 
+.flame {
+  font-size: 11px;
+  line-height: 1;
+  transition: opacity 0.3s;
+}
+.flame.off { opacity: 0.2; filter: grayscale(1); }
+.flame.on  { opacity: 1; }
+
 .humanity-state {
   font-family: 'Playfair Display', Georgia, serif;
   font-size: 11px;
@@ -312,6 +320,21 @@ function renderHumanity(value, estado) {
   `;
 }
 
+function renderHogueras(value, max) {
+  const v = Math.max(0, Math.min(max, value));
+  let flames = '';
+  for (let i = 0; i < max; i++) {
+    flames += `<span class="flame ${i < v ? 'on' : 'off'}">🔥</span>`;
+  }
+  return `
+    <div class="humanity-section">
+      <span class="humanity-label">Hogueras</span>
+      <span class="humanity-pips">${flames}</span>
+      <span class="humanity-state">${v}/${max}</span>
+    </div>
+  `;
+}
+
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -355,6 +378,7 @@ async function loadData() {
       </div>
 
       ${renderHumanity(d.humanidad ?? 0, d.estadoPersonaje || '🪙 Humano')}
+      ${renderHogueras(d.hogueras ?? 0, d.hogueras_max ?? 4)}
 
       <div class="footer">
         <div class="footer-stat">
