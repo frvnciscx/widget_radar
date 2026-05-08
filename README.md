@@ -126,6 +126,7 @@ const CATALOGO_DB  = 'TU_ID_AQUI';
 | `/api/misiones` | GET | Objetivos con progreso calculado | `{ count, misiones[] }` |
 | `/api/sync-misiones` | GET | Escribe progreso de objetivos a Notion | `{ updated, failed, skipped, updates[] }` |
 | `/api/repair-registros` | GET | Vincula relations faltantes (Personaje + Stat Ref). Soporta `?dry=1` para dry-run | `{ updated, skipped, errors, updates[] }` |
+| `/api/dedupe-registros` | GET | Archiva duplicados de un día (`?date=YYYY-MM-DD`, default hoy). Soporta `?dry=1`. Útil tras Run once de Make o fallos que duplican entradas | `{ kept, archived, errors, keptDetails[] }` |
 | `/api/cron-daily` | GET | **Endpoint del cron**: ejecuta repair → sync en orden | `{ repair, sync, duration_ms }` |
 | `/api/debug` | GET | Raw JSON del personaje | Dump completo de propiedades |
 

@@ -374,6 +374,7 @@ El estado caído debe sentirse como **algo que querés evitar** (no neutral). Ej
 | `/api/objetivos` | GET | Progreso real cruzando 3 DBs |
 | `/api/sync-objetivos` | GET/POST | Escribe Progreso a Notion (manual o cron) |
 | `/api/repair-registros` | GET/POST | Vincula relations faltantes (Personaje + Stat Ref). Soporta `?dry=1` |
+| `/api/dedupe-registros` | GET/POST | Archiva duplicados de un día (`?date=YYYY-MM-DD`). Mantiene la entrada más completa por hábito. Soporta `?dry=1` |
 | `/api/cron-daily` | GET/POST | Combina repair + sync. Es el endpoint que llama el cron |
 
 **Variables de entorno**: `NOTION_TOKEN` de la integration interna.
@@ -421,6 +422,7 @@ Estética común: usar la paleta y fuentes del tema elegido.
 - **100% engañoso** (sin Veces Target) → el sistema te miente y dejás de creerle
 - **Cambiar de tema cada semana** → diluye el sentido de progresión narrativa
 - **Confiar en que la automatización setea todo bien** sin verificar el primer día. Hacé un fetch de una page recién creada. Si faltan relations, los rollups callan en 0 y parecerá "el sistema no funciona" cuando es solo data incompleta.
+- **Hacer Run once de Make varias veces durante testing** sin limpiar — cada ejecución duplica entradas. Solución: `/api/dedupe-registros` después de cada test, o tener un Switch en Make que verifique si ya existe entrada del día antes de crear.
 
 ---
 
@@ -485,12 +487,13 @@ La mayoría de "habit tracker en Notion" son:
 | Streak romántico (todo o nada) | Veces Target honesto (progreso medible) |
 | Un solo "look" rígido | **5 temas intercambiables + guía para crear el tuyo** |
 
-**4 ideas únicas que no encontrás en otros templates:**
+**5 ideas únicas que no encontrás en otros templates:**
 
 1. **Pool de Integridad como recurso narrativo**: castiga falla en Hábitos Evitar, se recupera con disciplina. Le da peso emocional al sistema.
 2. **Hábitos Evitar como tipo formal**: los demás templates te hacen escribir "Sin azúcar" como hábito normal y te confunden con la lógica al revés. Aquí está formalizado en el modelo de datos.
 3. **Honestidad numérica**: el cálculo `Veces Target` evita el "100% en 3 días" engañoso de otros sistemas.
 4. **Estética intercambiable**: 5 temas pre-diseñados + guía para tu propio tema. La mecánica es universal, la narrativa la elegís vos.
+5. **Auto-reparación + dedupe**: cualquier sistema con automatización (Make/Zapier/n8n) tarde o temprano genera entradas incompletas o duplicadas. Este blueprint incluye `/api/repair-registros` + `/api/dedupe-registros` como endpoints de mantenimiento. Ningún template Notion en el mercado los tiene.
 
 ---
 

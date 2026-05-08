@@ -25,6 +25,7 @@ radar-widget/
 │   ├── misiones.js            ← GET misiones con progreso calculado (exporta computeMisiones)
 │   ├── sync-misiones.js       ← POST escribe Progreso a Notion (exporta runSyncMisiones)
 │   ├── repair-registros.js    ← POST vincula Personaje + Stat Ref a registros sin relations (exporta runRepairRegistros)
+│   ├── dedupe-registros.js    ← POST archiva duplicados de un día (deja la entrada más completa por hábito)
 │   ├── cron-daily.js          ← Endpoint del cron: ejecuta repair → sync en orden
 │   └── debug.js               ← Dump raw JSON del Personaje
 ├── index.html                 ← Radar de stats (widget activo)
@@ -56,6 +57,7 @@ radar-widget/
 | `/api/misiones` | GET | Misiones con progreso real (cruza 3 DBs) |
 | `/api/sync-misiones` | GET/POST | Escribe Progreso de cada misión a Notion |
 | `/api/repair-registros` | GET/POST | Vincula Personaje + Stat Ref en registros nuevos. Soporta `?dry=1` para dry-run |
+| `/api/dedupe-registros` | GET/POST | Archiva duplicados de un día (`?date=YYYY-MM-DD`, default hoy). Soporta `?dry=1` |
 | `/api/cron-daily` | GET/POST | Ejecuta repair → sync. Es el endpoint que llama el cron diario |
 | `/api/debug` | GET | Dump raw del Personaje |
 
