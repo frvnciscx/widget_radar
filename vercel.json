@@ -7,6 +7,7 @@
     { "source": "/api/habit-toggle",  "destination": "/api/habit-toggle.js" },
     { "source": "/api/misiones",      "destination": "/api/misiones.js" },
     { "source": "/api/sync-misiones", "destination": "/api/sync-misiones.js" },
+    { "source": "/api/repair-registros", "destination": "/api/repair-registros.js" },
     { "source": "/personaje",         "destination": "/personaje.html" },
     { "source": "/registro",          "destination": "/registro.html" }
   ],
