@@ -129,6 +129,7 @@ export async function computeMisiones(token) {
       dificultad: m.properties?.['Dificultad']?.select?.name || null,
       xpRecompensa: m.properties?.['XP Recompensa']?.number || 0,
       progresoManual: m.properties?.['Progreso']?.number || 0,
+      humanidadOtorgada: m.properties?.['Humanidad Otorgada']?.checkbox || false,
       xpAcumulado,
       xpTargetRound,
       progresoVsRound,
