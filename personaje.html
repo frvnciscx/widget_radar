@@ -348,10 +348,8 @@ async function loadData() {
 
     const cur = d.xpTotal % 500;
     const pct = Math.round((cur / 500) * 100);
-    const nextRank = d.xpTotal < 500 ? 500 :
-                     d.xpTotal < 1500 ? 1500 :
-                     d.xpTotal < 3500 ? 3500 : 7000;
-    const toNext = nextRank - d.xpTotal;
+    // Para siguiente nivel: XP que falta para llegar al próximo múltiplo de 500
+    const toNext = 500 - cur;
 
     document.getElementById('hud').innerHTML = `
       <div>
