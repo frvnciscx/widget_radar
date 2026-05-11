@@ -350,6 +350,8 @@ async function loadData() {
     const pct = Math.round((cur / 500) * 100);
     // Para siguiente nivel: XP que falta para llegar al próximo múltiplo de 500
     const toNext = 500 - cur;
+    // Umbral del próximo nivel (XP total necesario): Nv.2 → 1000, Nv.3 → 1500, etc.
+    const nextLevelTarget = (d.nivel || 1) * 500;
 
     document.getElementById('hud').innerHTML = `
       <div>
@@ -368,7 +370,7 @@ async function loadData() {
       <div class="xp-section">
         <div class="xp-header">
           <span class="xp-label">Experiencia</span>
-          <span class="xp-value">${cur} / 500</span>
+          <span class="xp-value">${d.xpTotal} / ${nextLevelTarget}</span>
         </div>
         <div class="bar-track">
           <div class="bar-fill" id="bar" style="width:0%"></div>

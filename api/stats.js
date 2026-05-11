@@ -115,7 +115,8 @@ export default async function handler(req, res) {
 
     const cur     = xpTotal - (Math.floor(xpTotal / 500) * 500);
     const filled  = Math.floor(cur / 50);
-    const barraXP = `Nv.${nivel} ${'▰'.repeat(filled)}${'▱'.repeat(10 - filled)} ${cur}/500 XP`;
+    const nextLevelTarget = nivel * 500;
+    const barraXP = `Nv.${nivel} ${'▰'.repeat(filled)}${'▱'.repeat(10 - filled)} ${xpTotal}/${nextLevelTarget} XP`;
 
     // --- STATS por categoría ---
     const statMap = {};
