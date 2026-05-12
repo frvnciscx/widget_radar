@@ -122,32 +122,63 @@ body {
 /* ---------- HUD (sección superior) ---------- */
 .hud-section {
   border-bottom: 1px solid var(--divider);
-  padding-bottom: 16px;
-  margin-bottom: 18px;
+  padding-bottom: 22px;
+  margin-bottom: 24px;
 }
 
 .hud-top {
   display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: start;
-  gap: 16px;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 6px;
 }
 
-.name {
+/* Portrait del personaje */
+.portrait {
+  width: 72px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  color: var(--text-accent);
+  flex-shrink: 0;
+}
+.portrait::before, .portrait::after {
+  content: '';
+  position: absolute;
+  width: 10px; height: 10px;
+}
+.portrait::before {
+  top: 0; left: 0;
+  border-top: 1px solid var(--rune);
+  border-left: 1px solid var(--rune);
+}
+.portrait::after {
+  bottom: 0; right: 0;
+  border-bottom: 1px solid var(--rune);
+  border-right: 1px solid var(--rune);
+}
+.portrait svg { width: 100%; height: 100%; }
+
+.hud-info { min-width: 0; }
+
+.hud-info .name {
   font-size: 10px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--text-secondary);
   font-family: 'DM Mono', monospace;
   font-weight: 300;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .rank {
   font-size: 20px;
   font-style: italic;
   color: var(--text-accent);
-  line-height: 1.1;
+  line-height: 1.15;
 }
 
 .title-class {
@@ -155,14 +186,16 @@ body {
   color: var(--text-secondary);
   font-family: 'DM Mono', monospace;
   font-weight: 300;
-  margin-top: 4px;
+  margin-top: 6px;
+  letter-spacing: 0.08em;
 }
 
 .context-msg {
   font-size: 11px;
   color: var(--text-muted);
   font-style: italic;
-  margin-top: 6px;
+  margin-top: 14px;
+  line-height: 1.4;
 }
 
 .level-block { text-align: right; }
@@ -179,9 +212,34 @@ body {
   text-transform: uppercase;
   color: var(--text-secondary);
   font-family: 'DM Mono', monospace;
+  margin-top: 4px;
 }
 
-.xp-bar-wrap { margin-top: 12px; }
+/* Cita literaria */
+.hud-quote {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-left: 1px solid var(--rune);
+  font-family: 'Playfair Display', Georgia, serif;
+  font-style: italic;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  position: relative;
+}
+.hud-quote .quote-attr {
+  display: block;
+  margin-top: 5px;
+  font-family: 'DM Mono', monospace;
+  font-style: normal;
+  font-size: 8px;
+  letter-spacing: 0.25em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.xp-bar-wrap { margin-top: 20px; }
 .xp-header {
   display: flex; justify-content: space-between; align-items: baseline;
   font-family: 'DM Mono', monospace;
@@ -209,16 +267,18 @@ body {
 .meta-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 14px;
+  margin-top: 18px;
   font-family: 'DM Mono', monospace;
   font-size: 9px;
   letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--text-secondary);
 }
+.meta-row > div { display: flex; flex-direction: column; gap: 6px; }
 .meta-row .label { font-weight: 300; }
-.meta-row .pips { display: flex; gap: 4px; align-items: center; }
+.meta-row .pips { display: flex; gap: 5px; align-items: center; }
+.meta-row .meta-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .pip {
   width: 7px; height: 7px; border-radius: 50%;
   background: var(--humanity-off);
@@ -279,6 +339,11 @@ body {
 /* En mobile (pantallas estrechas) apilar radar y stats */
 @media (max-width: 600px) {
   .stats-layout { grid-template-columns: 1fr; gap: 14px; }
+  .hud-top { gap: 14px; }
+  .portrait { width: 60px; height: 60px; }
+  .rank { font-size: 18px; }
+  .level-num { font-size: 36px; }
+  .hud-quote { font-size: 11px; padding: 8px 12px; }
 }
 
 /* ---------- Check-in (sección inferior) ---------- */
@@ -422,6 +487,85 @@ const VALUE_TO_KEY = {
 let ITEMS = [];
 let HOGUERAS = { value: 0, max: 4 };
 
+/* ============= Citas de la saga (rotan cada 3 días) ============= */
+const QUOTES = [
+  { text: "Don't you dare go Hollow.",                                         attr: "Solaire of Astora" },
+  { text: "If only I could be so grossly incandescent.",                       attr: "Solaire of Astora" },
+  { text: "Bear witness, fellow undead.",                                      attr: "Crestfallen Warrior" },
+  { text: "The fire fades, and the Lords go without thrones.",                 attr: "Dark Souls III" },
+  { text: "In the Age of Ancients, the world was unformed, shrouded by fog.",  attr: "Dark Souls Intro" },
+  { text: "Thou who art Undead, art chosen.",                                  attr: "Crestfallen Warrior" },
+  { text: "Time itself flows oddly in this land.",                             attr: "Solaire of Astora" },
+  { text: "Ash seeketh embers.",                                               attr: "Firekeeper" },
+  { text: "Hand it over. That thing, your dark soul.",                         attr: "Slave Knight Gael" },
+  { text: "Hmm. So cold... so cold...",                                        attr: "Patches the Hyena" },
+  { text: "What hath life to offer, but more of the same?",                    attr: "Crestfallen Warrior" },
+  { text: "Bearer, seek the soul. Larger, more powerful.",                     attr: "Firekeeper" },
+  { text: "May the flames guide thee.",                                        attr: "Firekeeper" },
+  { text: "The crestfallen ever do crumble first.",                            attr: "Andre of Astora" },
+  { text: "Only, in the ancient legends it is stated, that one day an undead shall be chosen to leave the undead asylum.", attr: "Oscar of Astora" },
+];
+
+function getQuote() {
+  // Rota cada 3 días desde epoch
+  const idx = Math.floor((Date.now() / 86400000) / 3) % QUOTES.length;
+  return QUOTES[idx];
+}
+
+/* ============= Portrait SVG (cambia según estado) ============= */
+function buildPortrait(estado) {
+  const isHueco = estado && estado.includes('Hueco');
+  const isMaldito = estado && estado.includes('Maldito');
+
+  // Llamas alrededor del yelmo (solo Humano)
+  let flames = '';
+  if (!isHueco && !isMaldito) {
+    flames = `
+      <path d="M18,55 Q14,48 16,42 Q20,46 18,55 Z"   fill="currentColor" opacity="0.45"/>
+      <path d="M82,55 Q86,48 84,42 Q80,46 82,55 Z"   fill="currentColor" opacity="0.45"/>
+      <path d="M50,12 Q46,5 48,2 Q52,5 50,12 Z"      fill="currentColor" opacity="0.55"/>
+    `;
+  } else if (isMaldito) {
+    flames = `
+      <path d="M18,55 Q14,48 16,42 Q20,46 18,55 Z"   fill="currentColor" opacity="0.2"/>
+      <path d="M82,55 Q86,48 84,42 Q80,46 82,55 Z"   fill="currentColor" opacity="0.2"/>
+    `;
+  }
+
+  // Yelmo + hombros (silueta caballero estilo Dark Souls)
+  // Si Hueco: línea más fina, opacidad menor, una grieta en el yelmo
+  const stroke = isHueco ? 'currentColor' : 'currentColor';
+  const strokeW = isHueco ? '1' : '1.4';
+  const opacity = isHueco ? '0.55' : '1';
+  const crack = isHueco
+    ? `<path d="M48,32 L46,38 L49,42 L47,48" fill="none" stroke="currentColor" stroke-width="0.7" opacity="0.7"/>`
+    : '';
+
+  return `
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="opacity:${opacity}">
+      ${flames}
+      <!-- Cresta del yelmo -->
+      <path d="M50,18 L48,8 L52,8 Z" fill="currentColor" opacity="0.7"/>
+      <!-- Yelmo -->
+      <path d="M30,32 Q30,18 50,18 Q70,18 70,32 L70,58 Q70,68 50,72 Q30,68 30,58 Z"
+            fill="none" stroke="${stroke}" stroke-width="${strokeW}"/>
+      <!-- Ranura del visor superior -->
+      <line x1="34" y1="40" x2="46" y2="40" stroke="${stroke}" stroke-width="${strokeW}"/>
+      <line x1="54" y1="40" x2="66" y2="40" stroke="${stroke}" stroke-width="${strokeW}"/>
+      <!-- Ranura del visor inferior -->
+      <line x1="38" y1="50" x2="62" y2="50" stroke="${stroke}" stroke-width="0.8" opacity="0.7"/>
+      <!-- Refuerzo central -->
+      <line x1="50" y1="32" x2="50" y2="58" stroke="${stroke}" stroke-width="0.6" opacity="0.5"/>
+      ${crack}
+      <!-- Hombros / capa -->
+      <path d="M22,76 Q35,72 50,74 Q65,72 78,76 L84,96 L16,96 Z"
+            fill="none" stroke="${stroke}" stroke-width="${strokeW}"/>
+      <!-- Sombra interior hombros -->
+      <path d="M30,80 Q50,78 70,80" fill="none" stroke="${stroke}" stroke-width="0.6" opacity="0.5"/>
+    </svg>
+  `;
+}
+
 function setTheme(t) {
   document.body.setAttribute('data-theme', t);
   document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.t === t));
@@ -467,18 +611,28 @@ function renderHud(d) {
     flames += `<span class="flame ${i < hog ? 'on' : 'off'}">🔥</span>`;
   }
 
+  const q = getQuote();
+  const portrait = buildPortrait(estado);
+
   document.getElementById('hud-section').innerHTML = `
     <div class="hud-top">
-      <div>
+      <div class="portrait">${portrait}</div>
+      <div class="hud-info">
         <div class="name">Paco</div>
         <div class="rank">${escapeHtml(d.rango || 'Iniciado')}</div>
         <div class="title-class">Bearer of the Curse</div>
-        <div class="context-msg">${escapeHtml(contextMsg)}</div>
       </div>
       <div class="level-block">
         <div class="level-num">${d.nivel || 1}</div>
         <div class="level-label">Nivel</div>
       </div>
+    </div>
+
+    <div class="context-msg">${escapeHtml(contextMsg)}</div>
+
+    <div class="hud-quote">
+      "${escapeHtml(q.text)}"
+      <span class="quote-attr">— ${escapeHtml(q.attr)}</span>
     </div>
 
     <div class="xp-bar-wrap">
@@ -493,10 +647,12 @@ function renderHud(d) {
 
     <div class="meta-row">
       <div>
-        <div><span class="label">Humanidad</span> · <span class="pips">${pips}</span> · ${estado}</div>
+        <div class="meta-line"><span class="label">Humanidad</span><span class="pips">${pips}</span></div>
+        <div class="meta-line" style="opacity:0.7">${estado}</div>
       </div>
       <div>
-        <div><span class="label">Hogueras</span> · <span class="pips">${flames}</span> · ${hog}/${hogMax}</div>
+        <div class="meta-line"><span class="label">Hogueras</span><span class="pips">${flames}</span></div>
+        <div class="meta-line" style="opacity:0.7">${hog}/${hogMax} encendidas</div>
       </div>
     </div>
   `;
