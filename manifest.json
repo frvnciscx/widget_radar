@@ -2,7 +2,7 @@
   "name": "Quest Log — Chronicle of the Undead",
   "short_name": "Quest Log",
   "description": "Sistema RPG de gamificación de hábitos sobre Notion. Personaje, niveles, humanidad, hogueras.",
-  "start_url": "/registro",
+  "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
@@ -20,6 +20,12 @@
   "categories": ["productivity", "lifestyle", "utilities"],
   "shortcuts": [
     {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Vista completa: HUD + Stats + Check-in",
+      "url": "/dashboard"
+    },
+    {
       "name": "Check-in del día",
       "short_name": "Check-in",
       "description": "Marcar hábitos de hoy",
@@ -30,12 +36,6 @@
       "short_name": "Personaje",
       "description": "Ver nivel, XP, humanidad y hogueras",
       "url": "/personaje"
-    },
-    {
-      "name": "Radar de Stats",
-      "short_name": "Stats",
-      "description": "Ver atributos del personaje",
-      "url": "/"
     }
   ]
 }

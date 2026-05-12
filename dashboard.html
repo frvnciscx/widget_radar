@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Quest Log — Dashboard</title>
+
+<!-- PWA -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#1a1a1a">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<link rel="apple-touch-icon" href="/icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Quest Log">
+<meta name="mobile-web-app-capable" content="yes">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { background: #1a1a1a; min-height: 100vh; }
+
+:root {
+  color-scheme: dark light;
+  --bg: #1a1a1a;
+  --text-primary: #e3e3e3;
+  --text-secondary: #888;
+  --text-muted: #555;
+  --text-accent: #d4c5a0;
+  --rune: rgba(212,197,160,0.55);
+  --radar-stroke: rgba(212,197,160,0.7);
+  --radar-fill: rgba(212,197,160,0.08);
+  --grid-line: rgba(255,255,255,0.07);
+  --bar-bg: rgba(255,255,255,0.06);
+  --bar-fill: #d4c5a0;
+  --divider: rgba(212,197,160,0.18);
+  --row-hover: rgba(255,255,255,0.03);
+  --btn-bg: rgba(255,255,255,0.04);
+  --btn-bg-active: rgba(212,197,160,0.18);
+  --done-color: #6b9f6b;
+  --skip-color: #b06868;
+  --humanity-on:  #d4c5a0;
+  --humanity-off: rgba(255,255,255,0.15);
+  --humanity-warn: #b06868;
+}
+
+[data-theme="light"] {
+  --bg: #f5f4ef;
+  --text-primary: #1a1a1a;
+  --text-secondary: #888;
+  --text-muted: #aaa;
+  --text-accent: #8B6914;
+  --rune: rgba(139,105,20,0.55);
+  --radar-stroke: rgba(139,105,20,0.8);
+  --radar-fill: rgba(139,105,20,0.07);
+  --grid-line: rgba(0,0,0,0.07);
+  --bar-bg: rgba(0,0,0,0.06);
+  --bar-fill: #8B6914;
+  --divider: rgba(139,105,20,0.25);
+  --row-hover: rgba(0,0,0,0.03);
+  --btn-bg: rgba(0,0,0,0.04);
+  --btn-bg-active: rgba(139,105,20,0.18);
+  --humanity-on: #8B6914;
+  --humanity-off: rgba(0,0,0,0.15);
+}
+
+[data-theme="sepia"] {
+  --bg: #f4ecd8;
+  --text-primary: #2c1a0e;
+  --text-secondary: #8a6a4a;
+  --text-muted: #b09070;
+  --text-accent: #6B4423;
+  --rune: rgba(107,68,35,0.55);
+  --radar-stroke: rgba(107,68,35,0.8);
+  --radar-fill: rgba(107,68,35,0.08);
+  --grid-line: rgba(107,68,35,0.12);
+  --bar-bg: rgba(107,68,35,0.08);
+  --bar-fill: #6B4423;
+  --divider: rgba(107,68,35,0.25);
+  --row-hover: rgba(107,68,35,0.04);
+  --btn-bg: rgba(107,68,35,0.06);
+  --btn-bg-active: rgba(107,68,35,0.18);
+  --humanity-on: #6B4423;
+  --humanity-off: rgba(107,68,35,0.2);
+}
+
+/* Estado Hueco: paleta apagada */
+body.hueco {
+  --text-primary: #888;
+  --text-accent: #777;
+  --bar-fill: #555;
+  --humanity-on: #555;
+  --rune: rgba(120,120,120,0.4);
+}
+
+body {
+  background: var(--bg);
+  font-family: 'Playfair Display', Georgia, serif;
+  color: var(--text-primary);
+  padding: max(env(safe-area-inset-top), 18px) 18px max(env(safe-area-inset-bottom), 18px);
+  min-height: 100vh;
+}
+
+.theme-switcher {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  opacity: 0.35;
+}
+.theme-switcher:hover { opacity: 1; }
+.theme-btn {
+  width: 10px; height: 10px; border-radius: 50%;
+  border: none; cursor: pointer; transition: transform 0.15s;
+}
+.theme-btn:hover, .theme-btn.active { transform: scale(1.4); }
+.theme-btn[data-t="dark"]  { background: #2c2c2a; border: 1px solid #666; }
+.theme-btn[data-t="light"] { background: #f5f4ef; border: 1px solid #ccc; }
+.theme-btn[data-t="sepia"] { background: #e8d5b7; border: 1px solid #b09070; }
+
+/* ---------- HUD (sección superior) ---------- */
+.hud-section {
+  border-bottom: 1px solid var(--divider);
+  padding-bottom: 16px;
+  margin-bottom: 18px;
+}
+
+.hud-top {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: 16px;
+}
+
+.name {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  font-family: 'DM Mono', monospace;
+  font-weight: 300;
+  margin-bottom: 4px;
+}
+
+.rank {
+  font-size: 20px;
+  font-style: italic;
+  color: var(--text-accent);
+  line-height: 1.1;
+}
+
+.title-class {
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-family: 'DM Mono', monospace;
+  font-weight: 300;
+  margin-top: 4px;
+}
+
+.context-msg {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 6px;
+}
+
+.level-block { text-align: right; }
+.level-num {
+  font-size: 42px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--text-primary);
+  letter-spacing: -2px;
+}
+.level-label {
+  font-size: 8px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  font-family: 'DM Mono', monospace;
+}
+
+.xp-bar-wrap { margin-top: 12px; }
+.xp-header {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.xp-header .label { color: var(--text-secondary); font-weight: 300; }
+.xp-header .val { color: var(--text-accent); font-size: 11px; }
+.bar-track {
+  height: 2px;
+  background: var(--bar-bg);
+  position: relative;
+  border-radius: 1px;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  background: var(--bar-fill);
+  border-radius: 1px;
+  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.meta-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.meta-row .label { font-weight: 300; }
+.meta-row .pips { display: flex; gap: 4px; align-items: center; }
+.pip {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--humanity-off);
+  transition: background 0.3s;
+}
+.pip.on { background: var(--humanity-on); }
+.flame { font-size: 11px; line-height: 1; }
+.flame.off { opacity: 0.2; filter: grayscale(1); }
+.flame.on  { opacity: 1; }
+
+/* ---------- Radar + Stats (sección media) ---------- */
+.stats-section {
+  margin-bottom: 18px;
+}
+
+.section-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.35em;
+  color: var(--text-accent);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--divider); }
+
+.stats-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  align-items: center;
+}
+
+.radar-wrap { display: flex; justify-content: center; }
+
+.stat-list { display: flex; flex-direction: column; gap: 8px; }
+.stat-item { display: flex; flex-direction: column; gap: 3px; }
+.stat-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+}
+.stat-name {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  font-weight: 300;
+}
+.stat-val {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--text-accent);
+  font-weight: 400;
+}
+
+/* En mobile (pantallas estrechas) apilar radar y stats */
+@media (max-width: 600px) {
+  .stats-layout { grid-template-columns: 1fr; gap: 14px; }
+}
+
+/* ---------- Check-in (sección inferior) ---------- */
+.checkin-section { margin-bottom: 8px; }
+
+.checkin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+.checkin-summary {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  font-weight: 300;
+}
+.checkin-summary .num { color: var(--text-accent); font-weight: 400; }
+
+.list { display: flex; flex-direction: column; }
+.row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 4px;
+  border-bottom: 1px solid var(--divider);
+}
+.row:last-child { border-bottom: none; }
+.row.completed .name { color: var(--text-muted); text-decoration: line-through; text-decoration-color: var(--divider); }
+.row.skipped .name   { color: var(--text-muted); opacity: 0.6; }
+
+.estado-group { display: flex; gap: 3px; }
+.estado-btn {
+  width: 22px; height: 22px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  background: var(--btn-bg);
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  opacity: 0.35;
+  transition: all 0.15s;
+}
+.estado-btn:hover { opacity: 0.75; }
+.estado-btn.active { opacity: 1; background: var(--btn-bg-active); }
+.estado-btn[data-e="completado"].active { color: var(--done-color); }
+.estado-btn[data-e="omitido"].active    { color: var(--skip-color); }
+.estado-btn[data-e="hoguera"] { font-size: 12px; }
+.estado-btn[data-e="hoguera"]:disabled { opacity: 0.15; cursor: not-allowed; }
+
+.name {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 13px;
+  color: var(--text-primary);
+  transition: color 0.15s;
+}
+.xp {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--text-accent);
+  white-space: nowrap;
+}
+.row.skipped .xp, .row.completed .xp { opacity: 0.4; }
+
+.loading, .empty {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 16px 0;
+  text-transform: uppercase;
+}
+
+.error-toast {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--skip-color);
+  text-align: center;
+  padding: 6px 0 0;
+  letter-spacing: 0.1em;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.error-toast.visible { opacity: 1; }
+</style>
+</head>
+<body data-theme="dark">
+
+<div class="theme-switcher" role="group" aria-label="Tema del widget">
+  <button class="theme-btn active" data-t="dark"  title="Oscuro"    onclick="setTheme('dark')"></button>
+  <button class="theme-btn"        data-t="light" title="Claro"     onclick="setTheme('light')"></button>
+  <button class="theme-btn"        data-t="sepia" title="Editorial" onclick="setTheme('sepia')"></button>
+</div>
+
+<!-- HUD ------------------------------------------------------------ -->
+<section class="hud-section" id="hud-section">
+  <div class="loading">Cargando...</div>
+</section>
+
+<!-- Stats / Radar -------------------------------------------------- -->
+<section class="stats-section">
+  <div class="section-label">Stats del Personaje</div>
+  <div id="stats-content" class="loading">Cargando...</div>
+</section>
+
+<!-- Check-in del día ----------------------------------------------- -->
+<section class="checkin-section">
+  <div class="checkin-header">
+    <div class="section-label" style="margin-bottom: 0;">Check-in del día</div>
+    <span class="checkin-summary" id="summary">—</span>
+  </div>
+  <div id="checkin-content" class="loading">Cargando...</div>
+  <div id="error-toast" class="error-toast"></div>
+</section>
+
+<script>
+const STATS = [
+  { key: 'fisico',    label: 'Físico',    max: 500 },
+  { key: 'mente',     label: 'Mente',     max: 500 },
+  { key: 'nutricion', label: 'Nutrición', max: 500 },
+  { key: 'habitos',   label: 'Hábitos',   max: 500 },
+  { key: 'negocio',   label: 'Negocio',   max: 500 },
+];
+
+const ESTADOS = {
+  pendiente:  { label: '⬜', value: '⬜ Pendiente' },
+  completado: { label: '✓',  value: '✅ Completado' },
+  omitido:    { label: '✕',  value: '❌ Omitido' },
+};
+const VALUE_TO_KEY = {
+  '⬜ Pendiente':  'pendiente',
+  '✅ Completado': 'completado',
+  '❌ Omitido':    'omitido',
+};
+
+let ITEMS = [];
+let HOGUERAS = { value: 0, max: 4 };
+
+function setTheme(t) {
+  document.body.setAttribute('data-theme', t);
+  document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.t === t));
+  try { localStorage.setItem('dashboard_theme', t); } catch(e) {}
+}
+try {
+  const saved = localStorage.getItem('dashboard_theme');
+  if (saved) setTheme(saved);
+} catch(e) {}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+/* ============= HUD ============= */
+function renderHud(d) {
+  const cur = d.xpTotal % 500;
+  const pct = Math.round((cur / 500) * 100);
+  const toNext = 500 - cur;
+  const nextLevelTarget = (d.nivel || 1) * 500;
+
+  // Mensaje contextual según estado
+  const estado = d.estadoPersonaje || '🪙 Humano';
+  let contextMsg = '';
+  if (estado.includes('Humano'))   contextMsg = 'El fuego arde con fuerza.';
+  if (estado.includes('Maldito'))  contextMsg = 'Las llamas se debilitan. Resiste.';
+  if (estado.includes('Hueco'))    contextMsg = 'Has perdido tu humanidad. Recupérala.';
+
+  // Pips humanidad
+  const hum = d.humanidad ?? 0;
+  let pips = '';
+  for (let i = 0; i < 5; i++) {
+    pips += `<span class="pip ${i < hum ? 'on' : ''}"></span>`;
+  }
+
+  // Flames hogueras
+  const hog = d.hogueras ?? 0;
+  const hogMax = d.hogueras_max ?? 4;
+  let flames = '';
+  for (let i = 0; i < hogMax; i++) {
+    flames += `<span class="flame ${i < hog ? 'on' : 'off'}">🔥</span>`;
+  }
+
+  document.getElementById('hud-section').innerHTML = `
+    <div class="hud-top">
+      <div>
+        <div class="name">Paco</div>
+        <div class="rank">${escapeHtml(d.rango || 'Iniciado')}</div>
+        <div class="title-class">Bearer of the Curse</div>
+        <div class="context-msg">${escapeHtml(contextMsg)}</div>
+      </div>
+      <div class="level-block">
+        <div class="level-num">${d.nivel || 1}</div>
+        <div class="level-label">Nivel</div>
+      </div>
+    </div>
+
+    <div class="xp-bar-wrap">
+      <div class="xp-header">
+        <span class="label">Experiencia</span>
+        <span class="val">${d.xpTotal} / ${nextLevelTarget}</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill" id="xp-bar" style="width: 0%"></div>
+      </div>
+    </div>
+
+    <div class="meta-row">
+      <div>
+        <div><span class="label">Humanidad</span> · <span class="pips">${pips}</span> · ${estado}</div>
+      </div>
+      <div>
+        <div><span class="label">Hogueras</span> · <span class="pips">${flames}</span> · ${hog}/${hogMax}</div>
+      </div>
+    </div>
+  `;
+
+  // Estado Hueco cambia paleta
+  document.body.classList.toggle('hueco', hum === 0);
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const bar = document.getElementById('xp-bar');
+      if (bar) bar.style.width = pct + '%';
+    });
+  });
+}
+
+/* ============= Radar SVG ============= */
+function buildRadar(data) {
+  const size = 180;
+  const cx = size / 2, cy = size / 2, R = 68;
+  const N = STATS.length;
+  const angle = i => (Math.PI * 2 * i / N) - Math.PI / 2;
+  const pt = (i, r) => [cx + r * Math.cos(angle(i)), cy + r * Math.sin(angle(i))];
+
+  let svg = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">`;
+
+  for (let ring = 1; ring <= 4; ring++) {
+    const r = R * ring / 4;
+    let d = '';
+    for (let i = 0; i < N; i++) {
+      const [x, y] = pt(i, r);
+      d += (i === 0 ? 'M' : 'L') + `${x.toFixed(1)},${y.toFixed(1)} `;
+    }
+    svg += `<path d="${d}Z" fill="none" stroke="var(--grid-line)" stroke-width="0.5"/>`;
+  }
+
+  for (let i = 0; i < N; i++) {
+    const [x, y] = pt(i, R);
+    svg += `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--grid-line)" stroke-width="0.5"/>`;
+    const [lx, ly] = pt(i, R + 12);
+    svg += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="DM Mono, monospace" font-size="6" font-weight="300" fill="var(--text-secondary)" letter-spacing="0.15em">${STATS[i].label.toUpperCase()}</text>`;
+  }
+
+  const vals = STATS.map(s => Math.min((data[s.key] || 0) / s.max, 1));
+  let shape = '';
+  for (let i = 0; i < N; i++) {
+    const r = R * Math.max(vals[i], 0.03);
+    const [x, y] = pt(i, r);
+    shape += (i === 0 ? 'M' : 'L') + `${x.toFixed(1)},${y.toFixed(1)} `;
+  }
+  svg += `<path d="${shape}Z" fill="var(--radar-fill)" stroke="var(--radar-stroke)" stroke-width="1"/>`;
+
+  for (let i = 0; i < N; i++) {
+    const r = R * Math.max(vals[i], 0.03);
+    const [x, y] = pt(i, r);
+    svg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2" fill="var(--radar-stroke)"/>`;
+  }
+
+  svg += '</svg>';
+  return svg;
+}
+
+function renderStats(d) {
+  let bars = '';
+  STATS.forEach(s => {
+    const val = d[s.key] || 0;
+    bars += `
+      <div class="stat-item">
+        <div class="stat-head">
+          <span class="stat-name">${s.label}</span>
+          <span class="stat-val">${val}</span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width: ${Math.min(100, (val / 500) * 100)}%"></div>
+        </div>
+      </div>`;
+  });
+
+  document.getElementById('stats-content').outerHTML = `
+    <div id="stats-content" class="stats-layout">
+      <div class="radar-wrap">${buildRadar(d)}</div>
+      <div class="stat-list">${bars}</div>
+    </div>
+  `;
+}
+
+/* ============= Check-in ============= */
+function rowClass(estado) {
+  if (estado === '✅ Completado') return 'row completed';
+  if (estado === '❌ Omitido')    return 'row skipped';
+  return 'row';
+}
+
+function renderSummary() {
+  const total = ITEMS.length;
+  const done  = ITEMS.filter(i => i.estado === '✅ Completado').length;
+  const xp    = ITEMS.filter(i => i.estado === '✅ Completado').reduce((s, i) => s + (i.xpBase || 0), 0);
+  const el = document.getElementById('summary');
+  if (!el) return;
+  if (total === 0) { el.textContent = '—'; return; }
+  el.innerHTML = `<span class="num">${done}</span>/${total} · <span class="num">+${xp} XP</span>`;
+}
+
+function renderCheckin() {
+  const root = document.getElementById('checkin-content');
+  if (ITEMS.length === 0) {
+    root.outerHTML = '<div id="checkin-content" class="empty">Sin hábitos hoy</div>';
+    return;
+  }
+
+  let html = '<div class="list">';
+  ITEMS.forEach(item => {
+    const key = VALUE_TO_KEY[item.estado] || 'pendiente';
+    const hogueraBtn = item.esProhibido
+      ? `<button class="estado-btn" data-e="hoguera" title="Caer pero usar hoguera" ${HOGUERAS.value <= 0 ? 'disabled' : ''}>🔥</button>`
+      : '';
+    html += `
+      <div class="${rowClass(item.estado)}" data-id="${item.id}">
+        <div class="estado-group">
+          <button class="estado-btn ${key === 'pendiente'  ? 'active' : ''}" data-e="pendiente"  title="Pendiente">${ESTADOS.pendiente.label}</button>
+          <button class="estado-btn ${key === 'completado' ? 'active' : ''}" data-e="completado" title="Completado">${ESTADOS.completado.label}</button>
+          <button class="estado-btn ${key === 'omitido'    ? 'active' : ''}" data-e="omitido"    title="Omitido">${ESTADOS.omitido.label}</button>
+          ${hogueraBtn}
+        </div>
+        <div class="name">${escapeHtml(item.entrada)}</div>
+        <div class="xp">+${item.xpBase || 0}</div>
+      </div>`;
+  });
+  html += '</div>';
+
+  root.outerHTML = `<div id="checkin-content">${html}</div>`;
+  attachListeners();
+}
+
+function attachListeners() {
+  document.querySelectorAll('.row').forEach(row => {
+    row.querySelectorAll('.estado-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (btn.disabled) return;
+        const id = row.dataset.id;
+        const target = btn.dataset.e;
+        if (target === 'hoguera') {
+          await toggle(id, ESTADOS.omitido.value, row, true);
+        } else {
+          await toggle(id, ESTADOS[target].value, row, false);
+        }
+      });
+    });
+  });
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-toast');
+  el.textContent = msg;
+  el.classList.add('visible');
+  setTimeout(() => el.classList.remove('visible'), 3000);
+}
+
+async function toggle(id, newEstado, rowEl, useHoguera = false) {
+  const item = ITEMS.find(i => i.id === id);
+  if (!item) return;
+  const prev = item.estado;
+  if (prev === newEstado && !useHoguera) return;
+
+  item.estado = newEstado;
+  renderSummary();
+  rowEl.className = rowClass(newEstado);
+  rowEl.querySelectorAll('.estado-btn').forEach(b => {
+    if (b.dataset.e === 'hoguera') return;
+    b.classList.toggle('active', b.dataset.e === VALUE_TO_KEY[newEstado]);
+  });
+
+  let hogueraDescontada = false;
+  if (useHoguera && HOGUERAS.value > 0) {
+    HOGUERAS.value -= 1;
+    hogueraDescontada = true;
+    // Re-render HUD para actualizar visual de hogueras
+    refreshHud();
+  }
+
+  try {
+    const r = await fetch('/api/habit-toggle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, estado: newEstado, useHoguera }),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    // Sincronizar hogueras y humanidad con respuesta del backend
+    if (data.hoguera && typeof data.hoguera.after === 'number') {
+      HOGUERAS.value = data.hoguera.after;
+    }
+    // Refresh hud para reflejar cambios de humanidad/hogueras tras el toggle
+    setTimeout(refreshAll, 800);
+  } catch(e) {
+    item.estado = prev;
+    renderSummary();
+    rowEl.className = rowClass(prev);
+    rowEl.querySelectorAll('.estado-btn').forEach(b => {
+      if (b.dataset.e === 'hoguera') return;
+      b.classList.toggle('active', b.dataset.e === VALUE_TO_KEY[prev]);
+    });
+    if (hogueraDescontada) { HOGUERAS.value += 1; refreshHud(); }
+    showError('Error al guardar');
+  }
+}
+
+/* ============= Carga inicial ============= */
+let CURRENT_STATS = null;
+
+function refreshHud() {
+  if (CURRENT_STATS) renderHud(CURRENT_STATS);
+}
+
+async function loadAll() {
+  try {
+    const [statsRes, regRes] = await Promise.all([
+      fetch('/api/stats'),
+      fetch('/api/registro'),
+    ]);
+    const stats = await statsRes.json();
+    const reg = await regRes.json();
+
+    CURRENT_STATS = stats;
+    HOGUERAS.value = stats.hogueras ?? 0;
+    HOGUERAS.max   = stats.hogueras_max ?? 4;
+
+    renderHud(stats);
+    renderStats(stats);
+
+    ITEMS = reg.items || [];
+    renderSummary();
+    if (ITEMS.length === 0) {
+      document.getElementById('checkin-content').outerHTML =
+        `<div id="checkin-content" class="empty">Sin hábitos para ${reg.today || 'hoy'}</div>`;
+    } else {
+      renderCheckin();
+    }
+  } catch(e) {
+    document.getElementById('hud-section').innerHTML = '<div class="empty">Error al cargar</div>';
+  }
+}
+
+async function refreshAll() {
+  // Refresh datos sin re-renderizar layout
+  try {
+    const statsRes = await fetch('/api/stats');
+    const stats = await statsRes.json();
+    CURRENT_STATS = stats;
+    HOGUERAS.value = stats.hogueras ?? 0;
+    HOGUERAS.max   = stats.hogueras_max ?? 4;
+    renderHud(stats);
+    renderStats(stats);
+  } catch(e) {}
+}
+
+loadAll();
+</script>
+</body>
+</html>

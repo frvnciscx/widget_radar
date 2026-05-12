@@ -11,7 +11,8 @@
     { "source": "/api/dedupe-registros", "destination": "/api/dedupe-registros.js" },
     { "source": "/api/cron-daily", "destination": "/api/cron-daily.js" },
     { "source": "/personaje",         "destination": "/personaje.html" },
-    { "source": "/registro",          "destination": "/registro.html" }
+    { "source": "/registro",          "destination": "/registro.html" },
+    { "source": "/dashboard",         "destination": "/dashboard.html" }
   ],
   "crons": [
     {
